@@ -1,0 +1,20 @@
+* { font-family: "Inter UI", "Helvetica Neue", sans-serif; }
+td, th { border-bottom: 1px solid #999; padding: 5px; text-align: left; }
+.amount { text-align: right; }
+.credit-bank .amount { font-weight: bold; }
+.date { white-space: nowrap; }
+body { margin: 30px; }
+.details { width: 640px; }
+
+.list img {
+    float: left;
+}
+
+.list li {
+    clear: both;
+}
+
+input.receipt {
+    width: 500px;
+}
+

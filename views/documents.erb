@@ -1,0 +1,45 @@
+<html>
+  <head>
+    <%= erb :style %>
+  </head>
+  <body>
+  <%= erb :menu, :locals => { :active => :documents } %>
+  <div id="docs">
+    <input class="search">
+    
+    <span class="sort" data-sort="title">Sort by title</span>
+    <span class="sort" data-sort="created">Sort by created</span>
+    <span class="sort" data-sort="state">Sort by state</span>
+    
+    <span>| <%= docs.size %> Docs</span>
+
+    <form method="POST" action="documents?state=unfiled">
+    <ul class="list">
+    <% docs.each do |b| %>
+      <li><img src="<%= b[:thumbnail] %>">
+        <p class="title"><%= b[:title] %></p>
+        <p class="created"><%= b[:created] %></p>
+        <p class="state"><%= b[:state] %></p>
+        <div class="actions">
+          <input type="submit" name="doc-<%= b[:id] %>-state" value="TODO">
+          <input type="submit" name="doc-<%= b[:id] %>-state" value="Defer">
+          <input type="submit" name="doc-<%= b[:id] %>-state" value="Archive">
+          <input type="submit" name="doc-<%= b[:id] %>-rotate-90" value="+90°">
+          <input type="submit" name="doc-<%= b[:id] %>-rotate-270" value="-90°">
+          <input type="submit" name="doc-<%= b[:id] %>-rotate-180" value="180°">
+        </div>
+        <p class="text"><%= html_escape(b[:text]) %></p>
+      </li>
+    <% end %>
+    </ul>
+    </form>
+    
+    <script src="dist/list.min.js"></script>
+    <script>
+      var options = {
+        valueNames: [ 'title', 'created', 'state', 'text' ]
+      }
+      var docsList = new List('docs', options);
+    </script>
+  </body>
+</html>

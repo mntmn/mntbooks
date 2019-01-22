@@ -1,0 +1,36 @@
+<html>
+  <head>
+    <%= erb :style %>
+  </head>
+  <body>
+    <%= erb :menu, :locals => { :active => :book } %>
+    <form action="/todo" method="POST">
+      <table>
+        <tr>
+          <th>Date</th>
+          <th>Cr</th>
+          <th>Amt</th>
+          <th>Debit</th>
+          <th>Credit</th>
+          <th class="details">Details</th>
+          <th>Receipt</th>
+        </tr>
+        <% bookings.each do |b| %>
+        <tr class="<%= b[:css_class] %>">
+          <td class="date"><%= b[:date] %></td>
+          <td class="amount"><%= b[:currency] %></td>
+          <td class="amount"><%= '%.2f' % (b[:amount]/100.0) %></td>
+          <td><%= b[:debit_account] %></td>
+          <td><%= b[:credit_account] %></td>
+          <td class="details"><%= b[:details_line_1] %><br><%= b[:details_line_2] %></td>
+          <td>
+            <% if b[:receipt_url] %>
+              <a href="/pdf/<%= b[:receipt_url] %>"><%= b[:receipt_url] %></a>
+            <% end %>
+          </td>
+        </tr>
+        <% end %>
+      </table>
+    </form>
+  </body>
+</html>

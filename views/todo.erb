@@ -1,0 +1,83 @@
+<html>
+  <head>
+    <%= erb :style %>
+    <link rel="stylesheet" href="dist/auto-complete.css"></link>
+  </head>
+  <body>
+    <%= erb :menu, :locals => { :active => :todo } %>
+    <form action="/todo" method="POST">
+      <table>
+        <% bookings.each do |b| %>
+        <tr>
+          <td><%= b[:date] %></td>
+          <td><%= b[:currency] %></td>
+          <td><%= b[:amount]/100.0 %></td>
+          <% if b[:details_line_1] %>
+          <td class="details"><%= b[:details_line_1] %><br><%= b[:details_line_2] %></td>
+          <% else %>
+          <td class="details"><%= b[:details] %></td>
+          <% end %>
+          <td>
+            <label>Account <input id="acc-<%= b[:id] %>" type="text" name="booking-<%= b[:id] %>-account" class="account"></label>
+          </td>
+          <td>
+            <label>Receipt <input id="rcpt-<%= b[:id] %>" type="text" name="booking-<%= b[:id] %>-receipt" class="receipt"></label>
+          </td>
+        </tr>
+        <% end %>
+        <tr>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td><input type="submit" value="Save"></td>
+        </tr>
+      </table>
+    </form>
+
+    <script src="dist/auto-complete.min.js"></script>
+    <script>
+
+var sourceFunc = function(term, suggest) {
+  term = term.toLowerCase()
+  var choices = <%= accounts %>
+  var matches = []
+  for (i=0; i<choices.length; i++) if (~choices[i].toLowerCase().indexOf(term)) matches.push(choices[i])
+  suggest(matches)
+}
+
+var invoices = <%= invoices %>
+var sourceFuncReceipt = function(term, suggest) {
+  term = term.toLowerCase()
+  var myId = this.selector
+  console.log("myId: ",myId)
+  var accElId = "acc-"+myId.split("-")[1]
+  console.log("accElId: ",accElId)
+  var choices = invoices[document.getElementById(accElId).value]
+  if (!choices) choices = []
+  
+  var matches = []
+  for (i=0; i<choices.length; i++) if (~choices[i].receipt_url.toLowerCase().indexOf(term)) matches.push(choices[i].receipt_url+"#amount="+choices[i].amount_cents/100.0)
+  suggest(matches)
+}
+
+var els = document.getElementsByClassName("account")
+for (i=0;i<els.length;i++) {
+  new autoComplete({
+    selector: "#"+els[i].id,
+    minChars: 0,
+    source: sourceFunc
+  })
+}
+var els = document.getElementsByClassName("receipt")
+for (i=0;i<els.length;i++) {
+  new autoComplete({
+    selector: "#"+els[i].id,
+    minChars: 0,
+    source: sourceFuncReceipt
+  })
+}
+
+    </script>
+  </body>
+</html>
