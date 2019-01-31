@@ -76,7 +76,7 @@ maxnum = -1
 
 keys = result.keys.select do |k|
   puts "key|#{k}|"
-  if k.match("L_TRANSACTIONID")
+  if k.match(/L_TRANSACTIONID/)
     num = k["L_TRANSACTIONID".size..-1].to_i
     maxnum = num if num>maxnum
   end
