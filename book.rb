@@ -13,6 +13,7 @@ DOC_FOLDER = ENV["DOC_FOLDER"]
 THUMB_FOLDER = ENV["THUMB_FOLDER"]
 INVOICES_CSV_FOLDER = ENV["INVOICES_CSV_FOLDER"]
 EXPORT_FOLDER = ENV["EXPORT_FOLDER"]
+PREFIX = "/books"
 
 class Book
   attr_accessor :acc_id, :bookings_for_debit_acc, :bookings_for_credit_acc, :book_rows, :bank_rows, :bookings_todo, :bookings_by_txn_id
@@ -76,7 +77,9 @@ class Book
         invoice_state TEXT,
         invoice_country TEXT
       );
+    SQL
 
+    db.execute <<-SQL
       create table documents (
         path varchar(512) not null primary key,
         state varchar(32) not null
@@ -604,7 +607,7 @@ def fetch_all_documents(book)
     docs.push({
                 path: path,
                 title: pdfname,
-                thumbnail: "/thumbnails/#{thumbname}",
+                thumbnail: PREFIX+"/thumbnails/#{thumbname}",
                 created: File.mtime(path),
                 text: text,
                 state: state,
@@ -616,7 +619,7 @@ def fetch_all_documents(book)
   docs
 end
 
-get '/documents' do
+get PREFIX+'/documents' do
   book.reload_book
   docs = fetch_all_documents(book)
 
@@ -640,7 +643,7 @@ get '/documents' do
       }
 end
 
-post '/documents' do
+post PREFIX+'/documents' do
   book.reload_book
   docs = fetch_all_documents(book)
 
@@ -699,7 +702,7 @@ post '/documents' do
     end
   end
   
-  redirect "documents?state=unfiled&cachebust=#{cachebust_id}"
+  redirect PREFIX+"/documents?state=unfiled&cachebust=#{cachebust_id}"
 end
 
 def import_outgoing_invoices(book)
@@ -790,7 +793,7 @@ def import_outgoing_invoices(book)
   "OK"
 end
 
-get '/invoices' do
+get PREFIX+'/invoices' do
   content_type 'text/plain;charset=utf8'
 
   invoices = import_outgoing_invoices(book)
@@ -798,7 +801,7 @@ get '/invoices' do
   invoices.to_s
 end
 
-get '/todo' do
+get PREFIX+'/todo' do
   book.reload_book
   
   rows = book.bookings_todo.map(&method(:bank_row_to_hash))
@@ -818,11 +821,11 @@ get '/todo' do
       }
 end
 
-get '/' do
-  redirect "/book"
+get PREFIX+'/' do
+  redirect PREFIX+"/book"
 end
 
-get '/book' do
+get PREFIX+'/book' do
   book.reload_book
   
   erb :book, :locals => {
@@ -830,7 +833,7 @@ get '/book' do
       }
 end
 
-get '/ledger' do
+get PREFIX+'/ledger' do
   content_type 'text/plain;charset=utf8'
   book.reload_book
 
@@ -850,26 +853,26 @@ get '/ledger' do
   return out
 end
 
-get '/export' do
+get PREFIX+'/export' do
   book.export_quarter
 end
 
-get '/pdf/:name' do
+get PREFIX+'/pdf/:name' do
   file = File.join(DOC_FOLDER, params[:name])
   send_file(file)
 end
 
-get '/thumbnails/:name' do
+get PREFIX+'/thumbnails/:name' do
   file = File.join(THUMB_FOLDER, params[:name])
   send_file(file)
 end
 
-get '/dist/:name' do
+get PREFIX+'/dist/:name' do
   file = File.join("dist", params[:name])
   send_file(file)
 end
 
-post '/todo' do
+post PREFIX+'/todo' do
   book.reload_book
   
   params.each do |k,v|
@@ -899,5 +902,5 @@ post '/todo' do
       end
     end
   end
-  redirect "/todo"
+  redirect PREFIX+"/todo"
 end
