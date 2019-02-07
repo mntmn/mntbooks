@@ -1,0 +1,8 @@
+[Unit]
+Description=MNT Bookkeeping
+
+[Service]
+ExecStart=/home/mntbooks/mntbooks/start.sh
+
+[Install]
+WantedBy=multi-user.target
