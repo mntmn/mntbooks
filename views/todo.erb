@@ -4,24 +4,32 @@
     <link rel="stylesheet" href="dist/auto-complete.css"></link>
   </head>
   <body>
-    <%= erb :menu, :locals => { :active => :todo } %>
-    <form action="/todo" method="POST">
+    <%= erb :menu, :locals => { :active => :todo, :prefix => prefix } %>
+    <form action="todo" method="POST">
       <table>
+	<tr>
+          <th>Date</th>
+          <th>Cr</th>
+          <th>Amt</th>
+          <th>Details</th>
+          <th>Account</th>
+          <th>Receipt</th>
+	</tr>
         <% bookings.each do |b| %>
         <tr>
-          <td><%= b[:date] %></td>
-          <td><%= b[:currency] %></td>
-          <td><%= b[:amount]/100.0 %></td>
+          <td class="date"><%= b[:date] %></td>
+          <td class="amount"><%= b[:currency] %></td>
+          <td class="amount"><%= '%.2f' % (b[:amount]/100.0) %></td>
           <% if b[:details_line_1] %>
           <td class="details"><%= b[:details_line_1] %><br><%= b[:details_line_2] %></td>
           <% else %>
           <td class="details"><%= b[:details] %></td>
           <% end %>
           <td>
-            <label>Account <input id="acc-<%= b[:id] %>" type="text" name="booking-<%= b[:id] %>-account" class="account"></label>
+            <label><input placeholder="Account" id="acc-<%= b[:id] %>" type="text" name="booking-<%= b[:id] %>-account" class="account"></label>
           </td>
           <td>
-            <label>Receipt <input id="rcpt-<%= b[:id] %>" type="text" name="booking-<%= b[:id] %>-receipt" class="receipt"></label>
+            <label><input placeholder="Receipt" id="rcpt-<%= b[:id] %>" type="text" name="booking-<%= b[:id] %>-receipt" class="receipt"></label>
           </td>
         </tr>
         <% end %>

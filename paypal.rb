@@ -5,6 +5,7 @@
 
 require "paypal_nvp"
 require 'sqlite3'
+require 'pp'
 
 acc_id = ENV["PP_USER"]
 
@@ -70,7 +71,6 @@ data = {
 
 result = p.call_paypal(data) # will return a hash
 #puts result["ACK"] # Success
-pp result
 
 maxnum = -1
 

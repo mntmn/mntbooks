@@ -3,7 +3,7 @@
     <%= erb :style %>
   </head>
   <body>
-    <%= erb :menu, :locals => { :active => :book } %>
+    <%= erb :menu, :locals => { :active => :book, :prefix => prefix } %>
     <form action="/todo" method="POST">
       <table>
         <tr>
@@ -25,7 +25,7 @@
           <td class="details"><%= b[:details_line_1] %><br><%= b[:details_line_2] %></td>
           <td>
             <% if b[:receipt_url] %>
-              <a href="/pdf/<%= b[:receipt_url] %>"><%= b[:receipt_url] %></a>
+              <a href="<%= prefix %>/pdf/<%= b[:receipt_url] %>"><%= b[:receipt_url] %></a>
             <% end %>
           </td>
         </tr>

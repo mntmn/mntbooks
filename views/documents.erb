@@ -3,7 +3,7 @@
     <%= erb :style %>
   </head>
   <body>
-  <%= erb :menu, :locals => { :active => :documents } %>
+  <%= erb :menu, :locals => { :active => :documents, :prefix => prefix } %>
   <div id="docs">
     <input class="search">
     

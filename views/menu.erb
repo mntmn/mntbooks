@@ -1,10 +1,24 @@
 <h2>
-  <a href="book">Booked</a> |
-  <a href="todo">TODO</a> |
-  <a href="documents">Documents</a> |
+  MNT Book &nbsp;
+  
+  <% if active == :book %>
+  Booked |
+  <% else %>
+  <a href="<%= prefix %>/book">Booked</a> |
+  <% end %>
+  
+  <% if active == :todo %>
+  Unbooked |
+  <% else %>
+  <a href="<%= prefix %>/todo">Unbooked</a> |
+  <% end %>
+  
+  <a href="<%= prefix %>/documents?state=unfiled">Docs</a> | <a href="<%= prefix %>/documents?state=todo">Docs (Todo)</a> | <a href="<%= prefix %>/documents?state=defer">Docs (Defer)</a>
 
   <a href="https://mntmn.com/invoices-admin/invoices">Invoices</a> |
  
+  <a href="https://mgmt.mntmn.com/inventory">Inventory</a> |
+
   <a href="https://shop.mntmn.com/admin">Orders</a> |
 
   <a href="https://app.goshippo.com/shipments">Shipments</a>
@@ -16,3 +30,4 @@
 | <a href="https://www.voelkner.de/my/overview.html">Voelkner</a>
 | <a href="https://app.goshippo.com/settings/account/billing">Shippo</a>
 </h4>
+
