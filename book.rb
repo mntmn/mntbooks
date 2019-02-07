@@ -479,7 +479,7 @@ def book_row_to_hash(b)
   end
 
   desc = clean_bank_row_description(b[7])
-  
+
   return {
     :id => b[0],
     :date => b[5][0..9],
@@ -639,7 +639,8 @@ get PREFIX+'/documents' do
   end
   
   erb :documents, :locals => {
-        :docs => docs
+        :docs => docs,
+	:prefix => PREFIX
       }
 end
 
@@ -811,13 +812,14 @@ get PREFIX+'/todo' do
   
   default_accounts = ["furniture","tools","consumables","packaging","computers","monitors","computers:input","computers:network","machines","parts:other","parts:reform","parts:va2000","parts:zz9000","sales:reform","sales:va2000","sales:zz9000","sales:services","sales:other","services:legal:taxadvisor","services:legal:notary","services:legal:ip","services:legal:lawyer","taxes:ust","taxes:gwst","taxes:kst","taxes:other","banking","shares","services:design","services:other","shipping","literature","capital-reserve"]
   
-  accounts = (debit_accounts+credit_accounts+default_accounts).sort
+  accounts = (debit_accounts+credit_accounts+default_accounts).sort.uniq
   invoices = JSON.generate(book.invoices_by_customer)
   
   erb :todo, :locals => {
         :bookings => rows,
         :invoices => invoices,
-        :accounts => accounts
+        :accounts => accounts,
+	:prefix => PREFIX
       }
 end
 
@@ -829,7 +831,8 @@ get PREFIX+'/book' do
   book.reload_book
   
   erb :book, :locals => {
-        :bookings => book.book_rows.map(&method(:book_row_to_hash))
+        :bookings => book.book_rows.map(&method(:book_row_to_hash)),
+	:prefix => PREFIX
       }
 end
 
