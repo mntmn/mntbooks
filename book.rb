@@ -637,7 +637,6 @@ def fetch_all_documents(book)
     end
 
     metadata = book.get_document_metadata(pdfname)
-    pp pdfname, metadata
     
     docs.push({
                 path: path,
@@ -692,6 +691,9 @@ post PREFIX+'/documents' do
 
   pp params
 
+  target_state = "unfiled"
+  target_docid = ""
+
   docs.each do |doc|
     new_state = params["doc-#{doc[:id]}-state"]
     name = doc[:title]
@@ -707,7 +709,9 @@ post PREFIX+'/documents' do
     new_sum =   params["doc-#{doc[:id]}-sum"]
 
     if params["doc-#{doc[:id]}-metadata"]
+      target_state=book.get_document_state(name)
       book.update_document_metadata(name,new_docid,new_date,new_sum,new_tags)
+      target_docid=doc[:id]
     end
 
     rotate90 =  params["doc-#{doc[:id]}-rotate-90"]
@@ -748,7 +752,7 @@ post PREFIX+'/documents' do
     end
   end
   
-  redirect PREFIX+"/documents?state=unfiled&cachebust=#{cachebust_id}"
+  redirect PREFIX+"/documents?state=#{target_state}&cachebust=#{cachebust_id}#doc#{target_docid}"
 end
 
 def import_outgoing_invoices(book)
