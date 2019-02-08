@@ -13,7 +13,7 @@ DOC_FOLDER = ENV["DOC_FOLDER"]
 THUMB_FOLDER = ENV["THUMB_FOLDER"]
 INVOICES_CSV_FOLDER = ENV["INVOICES_CSV_FOLDER"]
 EXPORT_FOLDER = ENV["EXPORT_FOLDER"]
-PREFIX = "/books"
+PREFIX = ENV["PREFIX"]
 
 class Book
   attr_accessor :acc_id, :bookings_for_debit_acc, :bookings_for_credit_acc, :book_rows, :bank_rows, :bookings_todo, :bookings_by_txn_id
@@ -82,7 +82,11 @@ class Book
     db.execute <<-SQL
       create table documents (
         path varchar(512) not null primary key,
-        state varchar(32) not null
+        state varchar(32) not null,
+        docid varhcar(32),
+        date varchar(23),
+        sum varchar(23),
+        tags TEXT
       );
     SQL
 
@@ -155,6 +159,7 @@ class Book
     @bookings_by_receipt_url = {}
     @invoices_by_customer = {}
     @document_state_by_path = {}
+    @document_metadata_by_path = {}
     
     @book_rows = @book_db.execute <<-SQL
 select id,debit_account,debit_txn_id,credit_account,credit_txn_id,date,amount_cents,details,receipt_url,currency,invoice_id from book order by date desc;
@@ -202,11 +207,17 @@ SQL
     end
 
     @doc_rows = @book_db.execute <<-SQL
-select path,state from documents;
+select path,state,docid,date,sum,tags from documents;
 SQL
 
     @doc_rows.each do |doc|
       @document_state_by_path[doc[0]]=doc[1]
+      @document_metadata_by_path[doc[0]]={
+        docid: doc[2],
+        date: doc[3],
+        sum: doc[4],
+        tags: doc[5]
+      }
     end
 
     @bank_rows = @bank_acc_db.execute <<-SQL
@@ -241,7 +252,7 @@ SQL
         :tax_code => ""
       }
 
-      puts "BANK|#{id}|#{details}"
+      #puts "BANK|#{id}|#{details}"
 
       if amount<0
         # negative amounts are debited from the account
@@ -348,9 +359,25 @@ SQL
     @document_state_by_path[pdfname] || "unfiled"
   end
 
+  def get_document_metadata(pdfname)
+    @document_metadata_by_path[pdfname] || {}
+  end
+
   def update_document_state(pdfname, state)
-    @book_db.execute("replace into documents (path,state) values (?,?)",[pdfname, state])
+    if get_document_state(pdfname) == "unfiled"
+      @book_db.execute("insert into documents (path,state) values (?,?)",[pdfname, state])
+    else
+      @book_db.execute("update documents set state=? where path=?",[state, pdfname])
+    end
     @document_state_by_path[pdfname] = state
+  end
+  
+  def update_document_metadata(pdfname, docid, date, sum, tags)
+    puts "update metadata:",[docid,date,sum,tags,pdfname]
+    if get_document_state(pdfname) == "unfiled"
+      update_document_state(pdfname, "defer")
+    end
+    @book_db.execute("update documents set docid=?,date=?,sum=?,tags=? where path=?",[docid,date,sum,tags,pdfname])
   end
 
   def debit_accounts
@@ -591,8 +618,13 @@ def fetch_all_documents(book)
       puts "GS|#{gs_cmd}"
       puts `#{gs_cmd}`
       puts `mogrify -resize 900 "#{thumbpath}"`
+    end
+    
+    if !File.exist?(textpath) then
+      puts "    '-- creating text extract"
       puts `pdftotext "#{path}" "#{textpath}"`
     end
+
     text = File.read(textpath)
 
     state = "unfiled"
@@ -603,6 +635,9 @@ def fetch_all_documents(book)
     else
       state = book.get_document_state(pdfname)
     end
+
+    metadata = book.get_document_metadata(pdfname)
+    pp pdfname, metadata
     
     docs.push({
                 path: path,
@@ -611,6 +646,7 @@ def fetch_all_documents(book)
                 created: File.mtime(path),
                 text: text,
                 state: state,
+                metadata: metadata,
                 id: Digest::MD5.hexdigest(path),
                 booking_id: booking_id
               })
@@ -665,7 +701,16 @@ post PREFIX+'/documents' do
       book.update_document_state(name, new_state)
     end
 
-    rotate90 = params["doc-#{doc[:id]}-rotate-90"]
+    new_docid = params["doc-#{doc[:id]}-docid"]
+    new_tags =  params["doc-#{doc[:id]}-tags"]
+    new_date =  params["doc-#{doc[:id]}-date"]
+    new_sum =   params["doc-#{doc[:id]}-sum"]
+
+    if params["doc-#{doc[:id]}-metadata"]
+      book.update_document_metadata(name,new_docid,new_date,new_sum,new_tags)
+    end
+
+    rotate90 =  params["doc-#{doc[:id]}-rotate-90"]
     rotate180 = params["doc-#{doc[:id]}-rotate-180"]
     rotate270 = params["doc-#{doc[:id]}-rotate-270"]
 

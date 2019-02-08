@@ -4,35 +4,96 @@
   </head>
   <body>
   <%= erb :menu, :locals => { :active => :documents, :prefix => prefix } %>
-  <div id="docs">
-    <input class="search">
-    
-    <span class="sort" data-sort="title">Sort by title</span>
-    <span class="sort" data-sort="created">Sort by created</span>
-    <span class="sort" data-sort="state">Sort by state</span>
-    
-    <span>| <%= docs.size %> Docs</span>
+  <style>
+    .text {
+        font-size: 8.0pt;
+    }
 
-    <form method="POST" action="documents?state=unfiled">
-    <ul class="list">
+    .doc {
+        //border-bottom: 1px solid #888;
+    }
+
+    .doc td {
+        padding-bottom: 20px;
+    }
+
+    .doc img {
+        width: 500px;
+        border: 1px solid #888;
+        border-radius: 2px;
+    }
+
+    .sort {
+        padding-right: 10px;
+    }
+
+    .filter {
+        margin-bottom: 20px;
+    }
+
+    .metadata, .actions, .state {
+        margin-bottom: 20px;
+    }
+
+    .metadata {
+        margin-bottom: 60px;
+    }
+
+    .title {
+        font-weight: bold;
+    }
+    
+  </style>
+  <div id="docs">
+    <div class="filter">
+      <input class="search" type="search" placeholder="Filter">
+      
+      <span class="sort" data-sort="title">Sort by title</span>
+      <span class="sort" data-sort="created">Sort by created</span>
+      <span class="sort" data-sort="state">Sort by state</span>
+      
+      <span>(<%= docs.size %> Docs)</span>
+    </div>
+    
+    <table class="docs">
+    <% i=1 %>
     <% docs.each do |b| %>
-      <li><img src="<%= b[:thumbnail] %>">
-        <p class="title"><%= b[:title] %></p>
-        <p class="created"><%= b[:created] %></p>
-        <p class="state"><%= b[:state] %></p>
-        <div class="actions">
-          <input type="submit" name="doc-<%= b[:id] %>-state" value="TODO">
-          <input type="submit" name="doc-<%= b[:id] %>-state" value="Defer">
-          <input type="submit" name="doc-<%= b[:id] %>-state" value="Archive">
-          <input type="submit" name="doc-<%= b[:id] %>-rotate-90" value="+90°">
-          <input type="submit" name="doc-<%= b[:id] %>-rotate-270" value="-90°">
-          <input type="submit" name="doc-<%= b[:id] %>-rotate-180" value="180°">
-        </div>
-        <p class="text"><%= html_escape(b[:text]) %></p>
-      </li>
+    <tr class="doc" id="doc<%=b[:id] %>">
+      <td><img src="<%= b[:thumbnail] %>"></td>
+      <td>
+        <form method="POST" action="documents?state=unfiled#doc<%= b[:id] %>">
+          <p class="title"><%= b[:title] %></p>
+          <p class="created">Created: <%= b[:created] %></p>
+          
+          <div class="metadata">
+            <input type="text" name="doc-<%= b[:id] %>-docid" placeholder="Doc ID" value="<%= b[:metadata][:docid] %>">
+            <input type="text" name="doc-<%= b[:id] %>-date" placeholder="Date" value="<%= b[:metadata][:date] %>">
+            <input type="text" name="doc-<%= b[:id] %>-sum" placeholder="Sum" value="<%= b[:metadata][:sum] %>">
+            <input type="text" name="doc-<%= b[:id] %>-tags" placeholder="Tags" value="<%= b[:metadata][:tags] %>">
+            <input type="submit" name="doc-<%= b[:id] %>-metadata" value="Save">
+          </div>
+
+          <div class="state">
+            State: <b><%= b[:state] %></b>
+            <span class="actions">
+              <input type="submit" name="doc-<%= b[:id] %>-state" value="TODO">
+              <input type="submit" name="doc-<%= b[:id] %>-state" value="Defer">
+              <input type="submit" name="doc-<%= b[:id] %>-state" value="Archive">
+            </span>
+          </div>
+          
+          <div class="actions">
+            Rotate:
+            <input type="submit" name="doc-<%= b[:id] %>-rotate-90" value="+90°">
+            <input type="submit" name="doc-<%= b[:id] %>-rotate-270" value="-90°">
+            <input type="submit" name="doc-<%= b[:id] %>-rotate-180" value="180°">
+          </div>
+          <p class="text"><%= html_escape(b[:text]) %></p>
+        </form>
+      </td>
+    </tr>
     <% end %>
-    </ul>
-    </form>
+    </table>
     
     <script src="dist/list.min.js"></script>
     <script>
