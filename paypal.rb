@@ -9,10 +9,15 @@ require 'pp'
 
 acc_id = ENV["PP_USER"]
 
-if (!ARGV[0] || ARGV[0].size!=10)
+if (ARGV[0] && ARGV[0].size!=10)
   puts "Usage: ruby paypal.rb <start date, i.e. 2018-06-01>"
   puts "And set PP_USER, PP_PASS, PP_CERT."
   exit
+end
+
+start_date = Date.today-14
+if ARGV[0]
+  start_date = ARGV[0]+"T00:00:00.000Z"
 end
 
 db_exists = false
@@ -65,7 +70,7 @@ p = PaypalNVP.new(false, {
 data = {
   #:version => "50.0", # Default is 50.0 as well... but now you can specify it
   :method => "TransactionSearch",
-  :StartDate => ARGV[0]+"T00:00:00.000Z"
+  :StartDate => start_date
   #:amt => "55"
 }
 
