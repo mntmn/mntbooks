@@ -83,9 +83,9 @@ class Book
       create table documents (
         path varchar(512) not null primary key,
         state varchar(32) not null,
-        docid varhcar(32),
+        docid varchar(32),
         date varchar(23),
-        sum varchar(23),
+        sum varchar(32),
         tags TEXT
       );
     SQL
