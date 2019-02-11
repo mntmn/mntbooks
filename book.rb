@@ -158,6 +158,7 @@ class Book
     @bookings_by_invoice_id = {}
     @bookings_by_receipt_url = {}
     @invoices_by_customer = {}
+    @documents = []
     @document_state_by_path = {}
     @document_metadata_by_path = {}
     
@@ -212,12 +213,19 @@ SQL
 
     @doc_rows.each do |doc|
       @document_state_by_path[doc[0]]=doc[1]
-      @document_metadata_by_path[doc[0]]={
+      metadata={
+        path: doc[0],
+        state: doc[1],
         docid: doc[2],
         date: doc[3],
         sum: doc[4],
         tags: doc[5]
       }
+      @document_metadata_by_path[doc[0]]=metadata
+      @documents.push(metadata)
+    end
+    @documents.sort_by! do |d|
+      d[:docid] || d[:path]
     end
 
     @bank_rows = @bank_acc_db.execute <<-SQL
@@ -361,6 +369,10 @@ SQL
 
   def get_document_metadata(pdfname)
     @document_metadata_by_path[pdfname] || {}
+  end
+
+  def get_all_documents()
+    @documents
   end
 
   def update_document_state(pdfname, state)
@@ -862,11 +874,11 @@ get PREFIX+'/todo' do
   default_accounts = ["furniture","tools","consumables","packaging","computers","monitors","computers:input","computers:network","machines","parts:other","parts:reform","parts:va2000","parts:zz9000","sales:reform","sales:va2000","sales:zz9000","sales:services","sales:other","services:legal:taxadvisor","services:legal:notary","services:legal:ip","services:legal:lawyer","taxes:ust","taxes:gwst","taxes:kst","taxes:other","banking","shares","services:design","services:other","shipping","literature","capital-reserve"]
   
   accounts = (debit_accounts+credit_accounts+default_accounts).sort.uniq
-  invoices = JSON.generate(book.invoices_by_customer)
+  documents = JSON.generate(book.get_all_documents)
   
   erb :todo, :locals => {
         :bookings => rows,
-        :invoices => invoices,
+        :documents => documents,
         :accounts => accounts,
 	:prefix => PREFIX
       }

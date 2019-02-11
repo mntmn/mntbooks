@@ -65,9 +65,8 @@ f = FinTS::PinTanClient.new(
 )
 
 accounts = f.get_sepa_accounts
-pp accounts
 
-statement = f.get_statement(accounts[0], (Date.today - 30), Date.today)
+statement = f.get_statement(accounts[0], (Date.today - 14), Date.today)
 
 statement.each do |row|
   puts "ROW: ----------------------------------------------"

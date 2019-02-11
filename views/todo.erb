@@ -54,19 +54,30 @@ var sourceFunc = function(term, suggest) {
   suggest(matches)
 }
 
-var invoices = <%= invoices %>
 var sourceFuncReceipt = function(term, suggest) {
   term = term.toLowerCase()
-  var myId = this.selector
-  console.log("myId: ",myId)
-  var accElId = "acc-"+myId.split("-")[1]
-  console.log("accElId: ",accElId)
-  var choices = invoices[document.getElementById(accElId).value]
-  if (!choices) choices = []
-  
+  //var myId = this.selector
+  //var accElId = "acc-"+myId.split("-")[1]
+  //var choices = invoices[document.getElementById(accElId).value]
+  var choices = <%= documents %>
   var matches = []
-  for (i=0; i<choices.length; i++) if (~choices[i].receipt_url.toLowerCase().indexOf(term)) matches.push(choices[i].receipt_url+"#amount="+choices[i].amount_cents/100.0)
+
+  if (term.length>0)
+  for (i=0; i<choices.length; i++) {
+    if ((choices[i].docid && ~choices[i].docid.toLowerCase().indexOf(term))
+        || (choices[i].tags && ~choices[i].tags.toLowerCase().indexOf(term))
+        || (choices[i].sum && ~choices[i].sum.toLowerCase().indexOf(term))) {
+      matches.push(choices[i])
+    }
+  }
   suggest(matches)
+}
+
+var renderFuncReceipt = function (item, search){
+    var display = item.docid+" | "+item.sum+" | "+item.tags;
+    search = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    var re = new RegExp("(" + search.split(' ').join('|') + ")", "gi");
+    return '<div class="autocomplete-suggestion" data-val="' + item.path + '">' + display.replace(re, "<b>$1</b>") + '</div>';
 }
 
 var els = document.getElementsByClassName("account")
@@ -82,7 +93,8 @@ for (i=0;i<els.length;i++) {
   new autoComplete({
     selector: "#"+els[i].id,
     minChars: 0,
-    source: sourceFuncReceipt
+    source: sourceFuncReceipt,
+    renderItem: renderFuncReceipt
   })
 }
 
