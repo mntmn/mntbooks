@@ -6,7 +6,8 @@
   <%= erb :menu, :locals => { :active => :documents, :prefix => prefix } %>
   <style>
     .text {
-        font-size: 8.0pt;
+        font-size: 7.0pt;
+        color: white;
     }
 
     .doc {
@@ -59,11 +60,11 @@
     <% i=1 %>
     <% docs.each do |b| %>
     <tr class="doc" id="doc<%=b[:id] %>">
-      <td><img src="<%= b[:thumbnail] %>"></td>
+      <td><a target="_blank" href="<%= prefix %>/pdf/<%= b[:title] %>"><img src="<%= b[:thumbnail] %>"></a></td>
       <td>
         <form method="POST" action="documents?state=unfiled#doc<%= b[:id] %>">
-          <p class="title"><%= b[:title] %></p>
-          <p class="created">Created: <%= b[:created] %></p>
+          <p class="title"><a target="_blank" href="<%= prefix %>/pdf/<%= b[:title] %>"><%= b[:title] %></a></p>
+          <p class="created">Scanned: <%= b[:created].strftime("%Y-%m-%d")  %></p>
           
           <div class="metadata">
             <input type="text" name="doc-<%= b[:id] %>-docid" placeholder="Doc ID" value="<%= b[:metadata][:docid] %>">
