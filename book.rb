@@ -637,7 +637,11 @@ def fetch_all_documents(book)
       puts `pdftotext "#{path}" "#{textpath}"`
     end
 
-    text = File.read(textpath)
+    if File.exist?(textpath) then
+      text = File.read(textpath)
+    else
+      text = "Text not available (password protected PDF?)"
+    end
 
     state = "unfiled"
     booking_id = nil
