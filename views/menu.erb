@@ -13,21 +13,33 @@
   <a href="<%= prefix %>/todo">Unbooked</a> |
   <% end %>
   
-  <a href="<%= prefix %>/documents?state=unfiled">Docs</a> | <a href="<%= prefix %>/documents?state=todo">Docs (Todo)</a> | <a href="<%= prefix %>/documents?state=defer">Docs (Defer)</a>
+  <% if active == :docs_unfiled %>
+  Docs |
+  <% else %>
+  <a href="<%= prefix %>/documents?state=unfiled">Docs</a> |
+  <% end %>
+  
+  <% if active == :docs_todo %>
+  Docs (Todo) |
+  <% else %>
+  <a href="<%= prefix %>/documents?state=todo">Docs (Todo)</a> |
+  <% end %>
+  
+  <% if active == :docs_defer %>
+  Docs (Defer) |
+  <% else %>
+  <a href="<%= prefix %>/documents?state=defer">Docs (Defer)</a> |
+  <% end %>
 
-  <a href="https://mntmn.com/invoices-admin/invoices">Invoices</a> |
- 
-  <a href="https://mgmt.mntmn.com/inventory">Inventory</a> |
-
-  <a href="https://shop.mntmn.com/admin">Orders</a> |
-
-  <a href="https://app.goshippo.com/shipments">Shipments</a>
+  <% if active == :invoices %>
+  Invoices |
+  <% else %>
+  <a href="<%= prefix %>/invoices">Invoices</a> |
+  <% end %>
+  
+  <% if active == :new_invoice %>
+  New Invoice
+  <% else %>
+  <a href="<%= prefix %>/invoices/new">New Invoice</a>
+  <% end %>
 </h2>
-<h4><a href="https://www.amazon.de/b2b/aba/ref=nav_youraccount_b2b_bam_oh_nv_oh">Amazon</a>
-| <a href="https://www.mouser.de/OrderHistory/InvoicesView.aspx">Mouser</a>
-| <a href="https://business.paypal.com/merchantdata/reportHome">Paypal</a>
-| <a href="https://www.dhl-geschaeftskundenportal.de">DHL</a>
-| <a href="https://www.voelkner.de/my/overview.html">Voelkner</a>
-| <a href="https://app.goshippo.com/settings/account/billing">Shippo</a>
-</h4>
-

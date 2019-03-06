@@ -3,7 +3,7 @@
     <%= erb :style %>
   </head>
   <body>
-  <%= erb :menu, :locals => { :active => :documents, :prefix => prefix } %>
+  <%= erb :menu, :locals => { :active => active, :prefix => prefix } %>
   <style>
     .text {
         font-size: 7.0pt;

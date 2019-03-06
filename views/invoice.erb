@@ -1,0 +1,258 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Rechnung</title>
+    <style type="text/css">
+      body {
+          font-family: "Inter";
+          font-size: 12pt;
+          width: 900px;
+      }
+
+      header {
+          position: fixed;
+          top: 0;
+      }
+      
+      @page {
+          margin-top: 1cm;
+          margin-bottom: 4cm;
+          margin-left: 2.5cm;
+          margin-right: 2.5cm;
+      }
+
+      :header {
+          display: none;
+      }
+      
+      table { page-break-inside:auto; }
+      tr    { page-break-inside:avoid; page-break-after:auto }
+      thead { display:table-header-group }
+      tfoot { display:table-footer-group }
+
+      thead th {
+          height: 200px;
+          text-align: left;
+          vertical-align: bottom;
+          padding: 0;
+          font-size: 12pt;
+      }
+
+      td {
+          border-top: 1px solid black;
+          margin: 0;
+          padding: 0;
+          padding-top: 6pt;
+          font-size: 12pt;
+          vertical-align: top;
+      }
+
+      header img {
+          width: 200px;
+          margin-left: -20px;
+          margin-top: -49px;
+          margin-right: 20px;
+      }
+
+      header div {
+          position: absolute;
+          font-size: 9pt;
+          margin-top: 12px;
+      }
+
+      #intro-space {
+          height:350px;
+      }
+      #intro {
+          margin-bottom: -175px;
+          margin-left: -1px;
+      }
+
+      #mnt-addr {
+          left: 300px;
+          width: 250px;
+          top: 0px;
+      }
+
+      #mnt-bank {
+          left: 690px;
+          top: 0px;
+          width: 250px;
+      }
+
+      #recipient-addr {
+          font-size: 11pt;
+          top: 180px;
+          left: 0;
+          white-space: nowrap;
+      }
+
+      #meta {
+          left: 300px;
+          width: 250px;
+          top: 180px;
+      }
+
+      #legal {
+          left: 690px;
+          top: 180px;
+          width: 250px;
+      }
+
+      table {
+          width: 100%;
+          border-collapse: collapse;
+      }
+
+      td.pos {
+          width: 50px;
+      }
+      td.amount {
+          width: 125px;
+      }
+      td.price {
+          width: 125px;
+      }
+      td.sum {
+          width: 80px;
+          white-space: nowrap;
+      }
+
+      th:last-child,
+      td:last-child {
+          text-align: right;
+      }
+
+      h5 {
+          font-size: 12pt;
+          margin: 0px;
+          font-weight: normal;
+      }
+
+      td p {
+          font-size: 9pt;
+          padding-right: 20px;
+      }
+
+      .noborder td {
+          border: 0;
+      }
+
+      .sums-head td {
+          padding-top: 40px;
+      }
+
+      .sums-foot td {
+          padding-bottom: 40px;
+      }
+      
+    </style>
+  </head>
+  <body>
+    <header>
+      <img src="../dist/mnt-logo-2015.png">
+      <div id="mnt-addr">
+        <% sender_address_lines.each do |line| %>
+        <%= line %><br>
+        <% end %>
+      </div>
+      
+      <div id="mnt-bank">
+        <% sender_bank_lines.each do |line| %>
+        <%= line %><br>
+        <% end %>
+      </div>
+      
+      <div id="recipient-addr">
+        <%= invoice[:invoice_company] %><br>
+        <%= invoice[:invoice_name] %><br>
+        <%= invoice[:invoice_address_1] %><br>
+        <%= invoice[:invoice_address_2] %><br>
+        <%= invoice[:invoice_zip] %>
+        <%= invoice[:invoice_city] %><br>
+        <%= invoice[:invoice_state] %>
+        <%= invoice[:invoice_country] %>
+      </div>
+      
+      <div id="meta">
+        <b>Rechnungsnummer: <%= invoice[:invoice_id] %></b><br>
+        Rechnungsdatum: <%= invoice[:date] %><br>
+        <% if (!invoice[:order_id].nil? && invoice[:order_id].size>0) %>Bestellnummer: <%= invoice[:order_id] %><% end %><br>
+        <br>
+        Leistungsdatum entspricht Rechnungsdatum
+      </div>
+      
+      <div id="legal">
+        <% sender_legal_lines.each do |line| %>
+        <%= line %><br>
+        <% end %>
+      </div>
+    </header>
+    
+    <div id="intro">
+      <div id="intro-space"></div>
+      <h2>Rechnung</h2>
+    </div>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Pos.</th>
+          <th>Menge</th>
+          <th>Preis</th>
+          <th>Bezeichnung</th>
+          <th>Summe</th>
+        </tr>
+      </thead>
+      <tfoot>
+      </tfoot>
+      <tbody>
+        <% i=0; invoice[:invoice_lines].each do |p| %>
+        <tr>
+          <td class="pos"><%= i=i+1 %> </td>
+          <td class="amount"><%= p["quantity"] %></td>
+          <td class="price"><%= p["price"] %></td>
+          <td>
+            <h5><%= p["title"] %></h5>
+            <p><%= p["description"] %></p>
+          </td>
+          <td class="sum"><%= p["sum"] %></td>
+        </tr>
+        <% end %>  
+        
+        <tr class="noborder sums-head">
+          <td colspan="3"></td>
+          <td><b>Zwischensumme Netto</b></td>
+          <td class="sum"><%= invoice[:net_total] %> <%= invoice[:currency] %></td>
+        </tr>
+        <tr class="noborder">
+          <td colspan="3"></td>
+          <td>USt (<%= invoice[:tax_rate] %>%<% if invoice[:invoice_vat_included] %> inkl.<% end %>)</td>
+          <td class="sum"><%= invoice[:tax_total] %> <%= invoice[:currency] %></td>
+        </tr>
+        <tr class="noborder sums-foot grand-total">
+          <td colspan="3"></td>
+          <td><b>Gesamtbetrag</b></td>
+          <td class="sum"><span style="border-bottom:double black;"><%= invoice[:total] %> <%= invoice[:currency] %></span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div id="outro">
+      <p>
+        <%= outro %>
+      </p>
+      <p>
+        <%= terms %>
+      </p>
+      <p>
+        Mit freundlichen Grüßen
+      </p>
+      <p>
+        Lukas F. Hartmann<br>
+        Geschäftsführer
+      </p>
+    </div>
+  </body>
+</html>
+

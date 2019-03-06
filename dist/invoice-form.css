@@ -1,0 +1,96 @@
+thead th {
+    height: 50px;
+    text-align: left;
+    vertical-align: bottom;
+    padding: 0;
+    font-size: 12pt;
+    border-bottom: 1px solid black;
+}
+
+td {
+    margin: 0;
+    padding: 0;
+    padding-top: 6pt;
+    font-size: 12pt;
+    vertical-align: top;
+}
+
+header img {
+    width: 200px;
+    margin-left: -20px;
+    margin-top: -49px;
+    margin-right: 20px;
+}
+
+header div {
+    font-size: 9pt;
+    margin-top: 12px;
+}
+
+#recipient-addr {
+    font-size: 11pt;
+    top: 180px;
+    left: 0;
+    white-space: nowrap;
+}
+
+#recipient-addr input {
+    width: 100%;
+}
+
+#meta {
+    left: 300px;
+    width: 250px;
+    top: 180px;
+}
+
+#legal {
+    left: 700px;
+    top: 180px;
+    width: 250px;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+td.pos {
+    width: 50px;
+}
+td.amount {
+    width: 125px;
+}
+td.price {
+    width: 125px;
+}
+td.sum {
+    width: 80px;
+}
+
+th:last-child,
+td:last-child {
+    text-align: right;
+}
+
+h5 {
+    font-size: 12pt;
+    margin: 0px;
+    font-weight: normal;
+}
+
+td p {
+    font-size: 9pt;
+    padding-right: 20px;
+}
+
+.noborder td {
+    border: 0;
+}
+
+.sums-head td {
+    padding-top: 40px;
+}
+
+.sums-foot td {
+    padding-bottom: 40px;
+}

@@ -1,0 +1,240 @@
+<html>
+  <head>
+    <link rel="stylesheet" type="text/css" href="../dist/style.css"></link>
+    <link rel="stylesheet" type="text/css" href="../dist/invoice-form.css"></link>
+    <link rel="stylesheet" href="../dist/auto-complete.css"></link>
+  </head>
+  <body>
+    <%= erb :menu, :locals => { :active => :new_invoice, :prefix => prefix } %>
+    <header>
+      <div id="recipient-addr" style="width:300px">
+        <input type="text" autofocus id="debit_account" class="account" placeholder="Debit Account" onchange="recalc()"><br>
+        <input type="text" id="credit_account" class="account" placeholder="Credit Account" value="sales" onchange="recalc()"><br>
+        <input type="text" id="name" placeholder="Name" onchange="recalc()"><br>
+        <input type="text" id="company" placeholder="Company" onchange="recalc()"><br>
+        <input type="text" id="addr1" placeholder="Address Line 1" onchange="recalc()"><br>
+        <input type="text" id="addr2" placeholder="Address Line 2" onchange="recalc()"><br>
+        <input type="text" id="zip" placeholder="ZIP" style="width:30%" onchange="recalc()">
+        <input type="text" id="city" placeholder="City" style="width:61%" onchange="recalc()"><br>
+        <input type="text" id="state" placeholder="State" onchange="recalc()"><br>
+        <input type="text" id="country" placeholder="DE" onchange="recalc()">
+      </div>
+      
+      <div id="meta">
+        <span>Invoice ID:</span> <input type="text" id="iid" placeholder="automatic"><br>
+        <span>Date:</span> <input type="text" id="idate" value="<%= invoice_date %>" onchange="recalc()"><br>
+        <span>Order ID:</span> <input type="text" id="ordernum" onchange="recalc()"><br>
+        <select id="payment-method" onchange="recalc()">
+          <option value="sepa" selected>SEPA</option>
+          <option value="paypal">paypal (paid)</option>
+          <option value="cash">cash (paid)</option>
+        </select>
+        <select id="tax-code" onchange="recalc()">
+          <option value="EU19" selected>EU 19%</option>
+          <option value="EU7">EU 7%</option>
+          <option value="NONEU0">0%</option>
+        </select>
+        <label><input type="checkbox" id="incl-vat" value="1" onchange="recalc()"> incl. VAT</label>
+      </div>
+    </header>
+    
+    <script>
+      var numRows = 0
+      var taxRate = 0.19
+      var invoiceCSV = ""
+      var bookRow = {}
+      var taxCode = "EU19"
+
+      var TAX_RATES = {
+        "EU19": 0.19,
+        "EU7": 0.07,
+        "NONEU0": 0
+      }
+
+      function recalc() {
+        var netTotal = 0.0
+        numRows = 0
+        var items = []
+
+        taxCode = document.getElementById("tax-code").value
+        taxRate = TAX_RATES[taxCode]
+        
+        while (true) {
+          var key = "position-"+(numRows+1)
+          var row = document.getElementById(key)
+          if (row) {
+            numRows++;
+            var titleEl = document.getElementById(key+"-title")
+            var descEl = document.getElementById(key+"-description")
+            var amountEl = document.getElementById(key+"-amount")
+            var priceEl = document.getElementById(key+"-price")
+            var sumEl = document.getElementById(key+"-sum")
+            
+            var sum = (amountEl.value * priceEl.value).toFixed(2)
+            sumEl.innerHTML = sum
+            netTotal += parseFloat(sum)
+
+            items.push({
+              title: titleEl.value,
+              quantity: parseInt(amountEl.value),
+              price: parseFloat(priceEl.value),
+              description: descEl.value,
+              sum: sum
+            })
+          } else {
+            break
+          }
+        }
+        
+        var netTotalEl = document.getElementById("total-net")
+        var grandTotalEl = document.getElementById("total-grand")
+        var taxTotalEl = document.getElementById("total-tax")
+        var inclVAT = document.getElementById("incl-vat").checked
+        
+        if (inclVAT) {
+          var tax = ((netTotal/(1+taxRate)) * taxRate)
+          var grandTotal = netTotal
+          netTotal -= tax
+        } else {
+          var tax = (netTotal * taxRate)
+          var grandTotal = netTotal+tax
+        }
+        
+        taxTotalEl.innerHTML = tax.toFixed(2)
+        grandTotalEl.innerHTML = grandTotal.toFixed(2)
+        netTotalEl.innerHTML = netTotal.toFixed(2)
+
+        var paymentMethod = document.getElementById("payment-method").value
+
+        bookRow = {
+          date: document.getElementById("idate").value,
+          amount: grandTotal*100,
+          currency: "EUR",
+          debit_account: document.getElementById("debit_account").value,
+          credit_account: document.getElementById("credit_account").value,
+          invoice_payment_method: paymentMethod,
+          invoice_company: document.getElementById("company").value,
+          invoice_name: document.getElementById("name").value,
+          invoice_address_1: document.getElementById("addr1").value,
+          invoice_address_2: document.getElementById("addr2").value,
+          invoice_zip: document.getElementById("zip").value,
+          invoice_city: document.getElementById("city").value,
+          invoice_state: document.getElementById("state").value,
+          invoice_country: document.getElementById("country").value,
+          order_id: document.getElementById("ordernum").value,
+          invoice_lines: JSON.stringify(items),
+          invoice_incl_vat: !!inclVAT,
+          tax_code: taxCode
+        }
+      }
+      
+      function addRow() {
+        recalc()
+        
+        var tbody = document.getElementById("positions")
+        var template = document.getElementById("position-1")
+        var id = numRows+1
+        var newRow = document.createElement("tr")
+        newRow.id = "position-"+id
+        newRow.innerHTML = template.innerHTML.replace(/-1-/g,'-'+id+'-')
+        newRow.children[0].innerHTML = id
+        tbody.appendChild(newRow)
+      }
+      
+      function deleteRow() {
+        recalc()
+        
+        var row = document.getElementById("position-"+(numRows))
+        if (row && numRows > 1) row.remove()
+      }
+
+      function finalize() {
+        var url = "../invoices"
+        var xhr = new XMLHttpRequest()
+        xhr.onreadystatechange = function() {
+          if (xhr.readyState === 4) {
+            console.log(xhr.response)
+            try {
+              var obj = JSON.parse(xhr.response)
+              alert("Invoice Created: "+obj.invoice_id)
+              location.href="<%= prefix %>/invoices"
+            } catch (e) {
+              alert("Sorry, an error occured: "+xhr.response)
+            }
+          }
+        }
+        xhr.open("POST", url, true)
+        xhr.setRequestHeader("Content-type", "application/json")
+        xhr.send(JSON.stringify(bookRow))
+      }
+    </script>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Pos</th>
+          <th>Amount</th>
+          <th>Price</th>
+          <th>Description</th>
+          <th>Sum</th>
+        </tr>
+      </thead>
+      <tfoot>
+      </tfoot>
+      <tbody id="positions">
+        <tr id="position-1">
+          <td class="pos"><span id="position-1-id">1</span></td>
+          <td class="amount"><input id="position-1-amount" type="number" value="1" style="width:50%" onchange="recalc()" onkeyup="recalc()" onclick="recalc()"></td>
+          <td class="price"><input id="position-1-price" type="text" value="" style="width:50%" onkeyup="recalc()" onchange="recalc()">€</td>
+          <td>
+            <input id="position-1-title" type="text" name="title" style="width:100%; font-weight: bold" onchange="recalc()">
+            <input id="position-1-description" type="text" name="description" style="width:100%" onchange="recalc()">
+          </td>
+          <td class="sum"><span id="position-1-sum">0</span> €</td>
+        </tr>
+      </tbody>
+      <tbody>
+        <tr class="noborder sums-head">
+          <td colspan="3"></td>
+          <td><b>Net Total</b></td>
+          <td><span id="total-net">0.00</span>€</td>
+        </tr>
+        <tr class="noborder">
+          <td colspan="3"></td>
+          <td>VAT (19%)</td>
+          <td><span id="total-tax">0.00</span>€</td>
+        </tr>
+        <tr class="noborder sums-foot grand-total">
+          <td colspan="3"></td>
+          <td><b>Grand Total</b></td>
+          <td><span style="border-bottom:double black;"><span id="total-grand">0.00</span>€</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <button onclick="addRow()">Add Row</button>
+    <button onclick="deleteRow()">Delete Row</button>
+    <button onclick="finalize()">Create Invoice</button>
+
+</form>
+
+<script src="../dist/auto-complete.min.js"></script>
+<script>
+  var sourceFunc = function(term, suggest) {
+    term = term.toLowerCase()
+    var choices = <%= customers %>
+      var matches = []
+    for (i=0; i<choices.length; i++) if (~choices[i].toLowerCase().indexOf(term)) matches.push(choices[i])
+    suggest(matches)
+  }
+
+  var els = document.getElementsByClassName("account")
+  for (i=0;i<els.length;i++) {
+    new autoComplete({
+      selector: "#"+els[i].id,
+      minChars: 0,
+      source: sourceFunc
+    })
+  }
+  </script>
+</body>
+</html>

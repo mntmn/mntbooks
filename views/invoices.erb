@@ -3,7 +3,7 @@
     <%= erb :style %>
   </head>
   <body>
-    <%= erb :menu, :locals => { :active => :book, :prefix => prefix } %>
+    <%= erb :menu, :locals => { :active => :invoices, :prefix => prefix } %>
     <form action="/todo" method="POST">
       <table>
         <tr>
@@ -12,17 +12,19 @@
           <th>Amt</th>
           <th>Debit</th>
           <th>Credit</th>
-          <th class="details">Details</th>
+          <th>Method</th>
+          <th class="details">Name</th>
           <th>Receipt</th>
         </tr>
-        <% bookings.each do |b| %>
-        <tr class="<%= b[:css_class] %>">
+        <% invoices.each do |b| %>
+        <tr>
           <td class="date"><%= b[:date] %></td>
           <td class="amount"><%= b[:currency] %></td>
-          <td class="amount"><%= '%.2f' % (b[:amount]/100.0) %></td>
+          <td class="amount"><%= '%.2f' % (b[:amount_cents]/100.0) %></td>
           <td><%= b[:debit_account] %></td>
           <td><%= b[:credit_account] %></td>
-          <td class="details"><%= b[:details_line_1] %><br><%= b[:details_line_2] %></td>
+          <td><%= b[:invoice_payment_method] %></td>
+          <td class="details"><%= b[:invoice_company] %><br><%= b[:invoice_name] %></td>
           <td>
             <% b[:receipt_urls].each do |r| %>
               <a href="<%= r %>"><%= r %></a>

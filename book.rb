@@ -6,6 +6,7 @@ require 'date'
 require 'sinatra'
 require 'pry'
 require 'csv'
+require 'ostruct'
 
 include ERB::Util
 
@@ -14,6 +15,15 @@ THUMB_FOLDER = ENV["THUMB_FOLDER"]
 INVOICES_CSV_FOLDER = ENV["INVOICES_CSV_FOLDER"]
 EXPORT_FOLDER = ENV["EXPORT_FOLDER"]
 PREFIX = ENV["PREFIX"]
+COMPANY_LEGAL = ENV["COMPANY_LEGAL"]
+COMPANY_ADDRESS = ENV["COMPANY_ADDRESS"]
+COMPANY_BANK = ENV["COMPANY_BANK"]
+
+TAX_RATES = {
+  "NONEU0" => 0,
+  "EU19" => 19,
+  "EU7" => 7
+}
 
 class Book
   attr_accessor :acc_id, :bookings_for_debit_acc, :bookings_for_credit_acc, :book_rows, :bank_rows, :bookings_todo, :bookings_by_txn_id
@@ -41,6 +51,7 @@ class Book
     end
 
     @book_db = SQLite3::Database.new @db_filename
+    @book_db.results_as_hash = true
 
     if !@db_exists
       create_book_db(@book_db)
@@ -67,17 +78,20 @@ class Book
         order_id  varchar (32),
         invoice_id  varchar (32),
         invoice_payment_method  varchar (32),
-        invoice_company TEXT,
-        invoice_lines TEXT,
-        invoice_name  TEXT,
-        invoice_address_1 TEXT,
-        invoice_address_2 TEXT,
-        invoice_zip TEXT,
-        invoice_city  TEXT,
-        invoice_state TEXT,
-        invoice_country TEXT
+        invoice_company text,
+        invoice_lines text,
+        invoice_name  text,
+        invoice_address_1 text,
+        invoice_address_2 text,
+        invoice_zip text,
+        invoice_city  text,
+        invoice_state text,
+        invoice_country text,
+        invoice_vat_included int
       );
     SQL
+
+    # doctype can be: outoing_invoice, incoming_receipt, contract, note, ...
 
     db.execute <<-SQL
       create table documents (
@@ -85,10 +99,32 @@ class Book
         state varchar(32) not null,
         docid varchar(32),
         date varchar(23),
+
         sum varchar(32),
+        
         tags TEXT
       );
     SQL
+
+      # date: Date.parse(raw[0]),            x
+      # amount: parseFloat(raw[1]),          x
+      # currency: raw[2],                    x
+      # credit_account: parseInt(raw[3]), 
+      # debit_account: raw[4],
+      # payment_method: raw[5],              x
+      # company: raw[6],                     
+      # name: raw[7],
+      # addr1: raw[8],
+      # addr2: raw[9],
+      # zip: raw[10],
+      # city: raw[11],
+      # state: raw[12],
+      # country_iso2: raw[13],               x
+      # order_number: raw[14],
+      # items: raw[15].split("$"),           x
+      # incl_vat: inclVAT,                   x
+      # csv: rawCSV
+    
 
     # credit_account empty if unpaid
     
@@ -160,26 +196,34 @@ class Book
     @invoices_by_customer = {}
     @documents = []
     @document_state_by_path = {}
-    @document_metadata_by_path = {}
+    @document_by_path = {}
+
+    ##############################################################
+    ### load all book rows into memory
     
     @book_rows = @book_db.execute <<-SQL
-select id,debit_account,debit_txn_id,credit_account,credit_txn_id,date,amount_cents,details,receipt_url,currency,invoice_id from book order by date desc;
+select * from book order by date desc;
 SQL
 
+    converted_book_rows = []
+
+    # create hashes for quick lookup by certain fields
     @book_rows.each do |row|
-      #pp row
-      if !@bookings_for_debit_acc[row[1]]
-        @bookings_for_debit_acc[row[1]]={}
+      row = OpenStruct.new(row)
+      converted_book_rows.push(row)
+      
+      if !@bookings_for_debit_acc[row[:debit_account]]
+        @bookings_for_debit_acc[row[:debit_account]]={}
       end
-      if !@bookings_for_credit_acc[row[3]]
-        @bookings_for_credit_acc[row[3]]={}
+      if !@bookings_for_credit_acc[row[:credit_account]]
+        @bookings_for_credit_acc[row[:credit_account]]={}
       end
-      @bookings_for_debit_acc[row[1]][row[2]]=row
-      @bookings_for_credit_acc[row[3]][row[4]]=row
+      @bookings_for_debit_acc[row[:debit_account]][row[:debit_txn_id]]=row
+      @bookings_for_credit_acc[row[:credit_account]][row[:credit_txn_id]]=row
 
       receipt_urls = []
-      receipt_urls = row[8].split(",") unless row[8].nil?
-      invoice_id = row[10]
+      receipt_urls = row[:receipt_url].split(",") unless row[:receipt_url].nil?
+      invoice_id = row[:invoice_id]
 
       receipt_urls.each do |receipt_url|
         if !@bookings_by_receipt_url[receipt_url]
@@ -191,42 +235,34 @@ SQL
       if !@bookings_by_invoice_id[invoice_id]
         @bookings_by_invoice_id[invoice_id]=[]
       end
-      @bookings_by_invoice_id[invoice_id].push(row)
-
-      debit_account = row[1]
-      if debit_account.match(/^customer:/)
+      if !invoice_id.nil? && invoice_id.size>0
+        @bookings_by_invoice_id[invoice_id].push(row)
+      end
+      
+      # FIXME stringly matching
+      debit_account = row[:debit_account]
+      if !debit_account.nil? && debit_account.match(/^customer:/)
         if !@invoices_by_customer[debit_account]
           @invoices_by_customer[debit_account]=[]
         end
         @invoices_by_customer[debit_account].push({
-                                                 book_id: row[0],
-                                                 receipt_url: receipt_urls[0], # FIXME
-                                                 amount_cents: row[6],
-                                                 date: row[5]
+                                                 book_id: row[:id],
+                                                 receipt_url: receipt_urls.first, # FIXME
+                                                 amount_cents: row[:amount_cents],
+                                                 date: row[:date]
                                                })
       end
     end
+    @book_rows = converted_book_rows
 
-    @doc_rows = @book_db.execute <<-SQL
-select path,state,docid,date,sum,tags from documents;
-SQL
+    reload_documents
 
-    @doc_rows.each do |doc|
-      @document_state_by_path[doc[0]]=doc[1]
-      metadata={
-        path: doc[0],
-        state: doc[1],
-        docid: doc[2],
-        date: doc[3],
-        sum: doc[4],
-        tags: doc[5]
-      }
-      @document_metadata_by_path[doc[0]]=metadata
-      @documents.push(metadata)
-    end
-    @documents.sort_by! do |d|
-      d[:docid] || d[:path]
-    end
+    ##############################################################
+    #
+    # bank, paypal rows import
+    #
+    # TODO factor out into modules
+    # TODO create some kind of rule system for this
 
     @bank_rows = @bank_acc_db.execute <<-SQL
       select id,date,amount_cents,details,transaction_code,"EUR" from transactions order by date desc;
@@ -240,7 +276,6 @@ SQL
       @bookings_for_credit_acc[acc_key]={}
     end
 
-    # TODO create some kind of rule system for this
     @bank_rows.each do |row|
       amount = row[2]
       txn_code = row[4].to_i
@@ -259,8 +294,6 @@ SQL
         :currency => "EUR",
         :tax_code => ""
       }
-
-      #puts "BANK|#{id}|#{details}"
 
       if amount<0
         # negative amounts are debited from the account
@@ -363,16 +396,44 @@ SQL
     end
   end
 
+  def reload_documents
+    ##############################################################
+    ### load all document rows into memory
+    
+    @doc_rows = @book_db.execute <<-SQL
+select path,state,docid,date,sum,tags from documents;
+SQL
+
+    @doc_rows.each do |doc|
+      doc = OpenStruct.new(doc)
+      @document_state_by_path[doc[:path]]=doc[:state]
+      @document_by_path[doc[:path]]=doc
+      @documents.push(doc)
+    end
+    @documents.sort_by! do |d|
+      d[:docid] || d[:path]
+    end
+  end
+
+  def get_invoice_booking(id)
+    results = @book_db.execute("select * from book where debit_txn_id=?", id)
+    OpenStruct.new(results.first)
+  end
+
   def get_document_state(pdfname)
-    @document_state_by_path[pdfname] || "unfiled"
+    (@document_by_path[pdfname] || {:state => "unfiled"})[:state]
   end
 
   def get_document_metadata(pdfname)
-    @document_metadata_by_path[pdfname] || {}
+    @document_by_path[pdfname] || {}
   end
 
   def get_all_documents()
     @documents
+  end
+
+  def all_invoices()
+    @documents.select {|d| d[:doctype]=="invoice"}
   end
 
   def update_document_state(pdfname, state)
@@ -381,7 +442,7 @@ SQL
     else
       @book_db.execute("update documents set state=? where path=?",[state, pdfname])
     end
-    @document_state_by_path[pdfname] = state
+    reload_documents
   end
   
   def update_document_metadata(pdfname, docid, date, sum, tags)
@@ -393,11 +454,15 @@ SQL
   end
 
   def debit_accounts
-    @book_db.execute("select distinct(debit_account) from book").flatten.reject(&:nil?)
+    @book_db.execute("select distinct(debit_account) from book").map(&:first).flatten.reject(&:nil?)
   end
   
   def credit_accounts
-    @book_db.execute("select distinct(credit_account) from book").flatten.reject(&:nil?)
+    @book_db.execute("select distinct(credit_account) from book").map(&:first).flatten.reject(&:nil?)
+  end
+  
+  def customer_accounts
+    (debit_accounts+credit_accounts).select {|a|a.match(/^customer/)}.sort.uniq
   end
 
   # FIXME some filenames can contain ",", sanitize!
@@ -408,22 +473,23 @@ select id,debit_account,credit_account,date,amount_cents,receipt_url,invoice_id,
 SQL
 
     rows.each do |row|
-      receipt = row[5]
-      if row[1].nil?
+      row = OpenStruct.new(row)
+      receipt = row[:receipt_url]
+      if row[:debit_account].nil?
         #puts "Warning: no debit_account"
-      elsif row[2].nil?
+      elsif row[:credit_account].nil?
         #puts "Warning: no credit_account"
       elsif receipt.nil? || !receipt || receipt == "none"
         #puts "Warning: no receipt"
-      elsif row[1]=="external" || row[2]=="external"
-      elsif row[1].match(/^customer:/)
+      elsif row[:debit_account]=="external" || row[2]=="external"
+      elsif row[:debit_account].match(/^customer:/)
       else
         receipt = receipt.split('#')[0]
-        date = row[3][0..9]
-        debit = row[1].gsub(":","-")
-        credit = row[2].gsub(":","-")
-        amount = row[4]/100
-        currency = row[7]
+        date = row[:date][0..9]
+        debit = row[:debit_account].gsub(":","-")
+        credit = row[:credit_account].gsub(":","-")
+        amount = row[:amount_cents]/100
+        currency = row[:currency]
 
         mon = date[5..6].to_i
         quarter = (mon-1)/3+1
@@ -445,6 +511,100 @@ SQL
 
     "OK"
   end
+
+  def import_outgoing_invoices()
+    # date,amount,currency,account1,account2,paymentMethod,company,name,addr1,addr2,zip,city,state,country,ordernum,items
+
+    reload_book
+    docs = fetch_all_documents
+    
+    paths = Dir.glob(INVOICES_CSV_FOLDER+"/**.csv").sort
+    paths.each do |path|
+      iid = path.split("-").last.sub(".csv","").to_i
+      year = File.basename(path).split("-").first.to_i
+      
+      csv = CSV.new(File.read(path), {:headers=>true})
+      csv.each do |row|
+        # FIXME: manual and shop csv header names differ :/
+        # FIXME: invoice id is implict and only in the file name .______.
+
+        formatted_iid = "#{year}-#{iid.to_s.rjust(4,'0')}"
+        
+        payment_method = row[5]
+        items = row[15]
+
+        if row[6] && row[6].gsub(/[^a-zA-Z0-9]/,"").size>3
+          customer_id = row[6].gsub(/[^a-zA-Z0-9]/,"").downcase.gsub(/(gmbh|ug|gbr|inc)/,"")
+        else
+          customer_id = row[7].gsub(/[^a-zA-Z0-9]/,"").downcase
+        end
+
+        debit_acc = "customer:#{customer_id}"
+        
+        credit_acc = "sales:other"
+        # project heuristics
+        if items.match("Reform") then
+          credit_acc = "sales:reform"
+        elsif items.match("ZZ9000") then
+          credit_acc = "sales:zz9000"
+        elsif items.match("VA2000") then
+          credit_acc = "sales:va2000"
+        end
+
+        tax_code = "NONEU-0"
+        if row[4]=="8400"
+          tax_code = "EU-19"
+        end
+
+        # an invoice is:
+        # - a transaction from a customer subaccount to a sales subaccount
+        # - a document that can be rendered
+        # - receipt_url of transaction can point to the pdf renderer
+        
+        data = {
+          date: row[0].split(" ").first,
+          amount: (row[1].to_f*100).to_i,
+          currency: row[2],
+          invoice_id: formatted_iid,
+          invoice_payment_method: row[5],
+          invoice_company: row[6],
+          invoice_name: row[7],
+          invoice_address_1: row[8],
+          invoice_address_2: row[9],
+          invoice_zip: row[10],
+          invoice_city: row[11],
+          invoice_state: row[12],
+          invoice_country: row[13],
+          order_id: row[14],
+          invoice_lines: row[15],
+          debit_account: debit_acc,
+          credit_account: credit_acc,
+          debit_txn_id: formatted_iid,
+          tax_code: tax_code,
+          details: "Invoice #{formatted_iid}"
+        }
+
+        docs.each do |d|
+          if d[:title].match(formatted_iid) then
+            data[:receipt_url] = d[:path].split("/").last
+          end
+        end
+
+        iid+=1
+
+        booking = book.bookings_by_invoice_id[formatted_iid]
+        if booking
+          puts "  '-- existing booking: #{booking[0]}"
+        else
+          book.create_booking(data,false)
+          puts "  '-- new booking created"
+        end
+      end
+    end
+
+    "OK"
+  end
+
 end
 
 def clean_bank_row_description(raw_desc)
@@ -509,90 +669,49 @@ def bank_row_to_hash(b)
   }
 end
 
+def make_receipt_urls(raw_receipt_url)
+  receipt_urls = []
+  if raw_receipt_url
+    receipt_urls_raw = raw_receipt_url.split(",")
+    receipt_urls_raw.each do |r|
+      if r=="none"
+        r=""
+      elsif r[0]!="/"
+        r = "/pdf/#{r}"
+      end
+      receipt_urls.push(r)
+    end
+  end
+  receipt_urls
+end
+
 # select id,debit_account,debit_txn_id,credit_account,credit_txn_id,date,amount,details,receipt_url,currency from book;
 def book_row_to_hash(b)  
   klass = ""
-  amount = b[6]
-  if !b[3].nil? && b[3].match("assets:bank-")
+  amount = b[:amount_cents]
+  if !b[:credit_account].nil? && b[:credit_account].match("assets:bank-")
     klass = "credit-bank"
   end
 
-  desc = clean_bank_row_description(b[7])
+  receipt_urls = make_receipt_urls(b[:receipt_url])
+  desc = clean_bank_row_description(b[:details])
 
   return {
-    :id => b[0],
-    :date => b[5][0..9],
-    :currency => b[9].sub("EUR","€"),
+    :id => b[:id],
+    :date => b[:date][0..9],
+    :currency => b[:currency].sub("EUR","€"),
     :amount => amount,
-    :debit_account => b[1],
-    :credit_account => b[3],
+    :debit_account => b[:debit_account],
+    :credit_account => b[:credit_account],
     :details => desc[:details],
     :details_line_1 => desc[:details_line_1]||desc[:details],
     :details_line_2 => desc[:details_line_2],
-    :receipt_url => b[8],
+    :receipt_urls => receipt_urls,
     :css_class => klass
   }
 end
 
 book = Book.new
-
-# FIXME: revive or delete this
-# make a list of all available PDF files for linking as receipts
-def match_receipts(rows, receipts)
-  result_matches = {}
-  tag_map = {}
-  tags_to_remove = {}
-  receipts.each do |r|
-    tags = r.gsub(".pdf","").split("-").map(&:downcase)
-    if tags.last.to_i.to_s == tags.last
-      if tags.last.to_i < 100*50000 # FIXME threshold?
-        tags[-1] = "price-"+tags.last
-      end
-    end
-    if tags.first.to_i.to_s == tags.first && tags.first[0..3]==Date.today.year.to_s
-      tags[0] = "date-"+tags[0]
-    end
-    
-    tags.each do |t|
-      if tag_map[t]
-        tags_to_remove[t] = true
-      else
-        tag_map[t] = r
-      end
-    end
-  end
-
-  tags_to_remove.each do |k,v|
-    tag_map.delete(k)
-  end
-
-  # rows are the unbooked bank rows
-  rows.each do |r|
-    matches = []
-    
-    d = r[:details].gsub(/[\/+\-]+/," ")
-    if (match_row = tag_map["price-"+r[:amount].to_s])
-      matches.push(match_row)
-    else
-      words = d.split(" ")
-      words.each do |word|
-        if (word.size>4 && match_row = tag_map[word.downcase])
-          puts("matched: '#{word}' for #{r}")
-          matches.push(match_row)
-        end
-      end
-    end
-
-    # todo histogram to pick best match
-    if matches.size>0
-      pp [r,matches]
-      result_matches[r[:id]]=matches[0]
-    end
-  end
-  
-  return result_matches
-end
-
 
 # for each pdf:
 # - check if in book table
@@ -652,6 +771,8 @@ def fetch_all_documents(book)
       state = book.get_document_state(pdfname)
     end
 
+    # FIXME why are these 2 linked structures instead of one?
+    
     metadata = book.get_document_metadata(pdfname)
     
     docs.push({
@@ -674,6 +795,8 @@ get PREFIX+'/documents' do
   book.reload_book
   docs = fetch_all_documents(book)
 
+  state = params["state"]
+
   if params["state"]
     docs = docs.select do |d|
       d[:state] == params["state"]
@@ -682,6 +805,7 @@ get PREFIX+'/documents' do
   
   if params["cachebust"]
     docs.each do |d|
+      d = OpenStruct.new(d)
       if d[:id] == params["cachebust"]
         d[:thumbnail]+="?v="+Random.new.rand.to_s
         break
@@ -691,7 +815,8 @@ get PREFIX+'/documents' do
   
   erb :documents, :locals => {
         :docs => docs,
-	:prefix => PREFIX
+	      :prefix => PREFIX,
+        :active => "docs_#{state}".to_sym
       }
 end
 
@@ -711,6 +836,7 @@ post PREFIX+'/documents' do
   target_docid = ""
 
   docs.each do |doc|
+    doc = OpenStruct.new(doc)
     new_state = params["doc-#{doc[:id]}-state"]
     name = doc[:title]
     
@@ -771,99 +897,148 @@ post PREFIX+'/documents' do
   redirect PREFIX+"/documents?state=#{target_state}&cachebust=#{cachebust_id}#doc#{target_docid}"
 end
 
-def import_outgoing_invoices(book)
-  # date,amount,currency,account1,account2,paymentMethod,company,name,addr1,addr2,zip,city,state,country,ordernum,items
-
+get PREFIX+'/invoices' do
+  # display a table of all documents with doctype == invoice
   book.reload_book
-  docs = fetch_all_documents
   
-  paths = Dir.glob(INVOICES_CSV_FOLDER+"/**.csv").sort
-  paths.each do |path|
-    iid = path.split("-").last.sub(".csv","").to_i
-    year = File.basename(path).split("-").first.to_i
-    
-    csv = CSV.new(File.read(path), {:headers=>true})
-    csv.each do |row|
-      # FIXME: manual and shop csv header names differ :/
-      # FIXME: invoice id is implict and only in the file name .______.
-
-      formatted_iid = "#{year}-#{iid.to_s.rjust(4,'0')}"
-      
-      payment_method = row[5]
-      items = row[15]
-
-      if row[6] && row[6].gsub(/[^a-zA-Z0-9]/,"").size>3
-        customer_id = row[6].gsub(/[^a-zA-Z0-9]/,"").downcase.gsub(/(gmbh|ug|gbr|inc)/,"")
-      else
-        customer_id = row[7].gsub(/[^a-zA-Z0-9]/,"").downcase
-      end
-
-      debit_acc = "customer:#{customer_id}"
-      
-      credit_acc = "sales:other"
-      # project heuristics
-      if items.match("Reform") then
-        credit_acc = "sales:reform"
-      elsif items.match("ZZ9000") then
-        credit_acc = "sales:zz9000"
-      elsif items.match("VA2000") then
-        credit_acc = "sales:va2000"
-      end
-
-      tax_code = "NONEU-0"
-      if row[4]=="8400"
-        tax_code = "EU-19"
-      end
-      
-      data = {
-        date: row[0].split(" ").first,
-        amount: (row[1].to_f*100).to_i,
-        currency: row[2],
-        invoice_id: formatted_iid,
-        invoice_payment_method: row[5],
-        invoice_company: row[6],
-        invoice_name: row[7],
-        invoice_address_1: row[8],
-        invoice_address_2: row[9],
-        invoice_zip: row[10],
-        invoice_city: row[11],
-        invoice_state: row[12],
-        invoice_country: row[13],
-        order_id: row[14],
-        invoice_lines: row[15],
-        debit_account: debit_acc,
-        credit_account: credit_acc,
-        debit_txn_id: formatted_iid,
-        tax_code: tax_code,
-        details: "Invoice #{formatted_iid}"
+  invoices=book.book_rows.select do |b|
+    !b[:invoice_id].nil? && b[:invoice_id].size>0
+  end
+  
+  invoices=invoices.map do |i|
+    i[:receipt_urls] = make_receipt_urls(i[:receipt_url])
+    i
+  end
+  
+  erb :invoices, :locals => {
+        :invoices => invoices,
+	      :prefix => PREFIX
       }
+end
 
-      docs.each do |d|
-        if d[:title].match(formatted_iid) then
-          data[:receipt_url] = d[:path].split("/").last
-        end
-      end
+get PREFIX+'/invoices/new' do
+  # new invoice form
 
-      iid+=1
+  customers=book.customer_accounts
 
-      booking = book.bookings_by_invoice_id[formatted_iid]
-      if booking
-        puts "  '-- existing booking: #{booking[0]}"
-      else
-        book.create_booking(data,false)
-        puts "  '-- new booking created"
-      end
+  erb :new_invoice, :locals => {
+        :customers => customers,
+        :prefix => PREFIX,
+        :invoice_date => Date.today
+      }
+end
+
+get PREFIX+'/invoices/:id' do
+  book.reload_book
+  
+  # display/render an invoice
+
+  iid=params["id"]
+  invoice = book.get_invoice_booking(iid)
+
+  if invoice[:invoice_lines][0] == '['
+    invoice[:invoice_lines] = JSON.parse(invoice[:invoice_lines])
+  else
+    # FIXME move this to invoice importer
+    ils = []
+    ils_raw = invoice[:invoice_lines].split("$")
+    ils_raw.each do |il|
+      il_raw = il.split("|")
+      ils.push({
+        "title" => il_raw[0],
+        "quantity" => il_raw[1],
+        "price" => il_raw[2],
+        "description" => il_raw[3],
+        "sum" => il_raw[1].to_f*il_raw[2].to_f
+      })
+    end
+    invoice[:invoice_lines] = ils
+  end
+
+  total = invoice[:amount_cents]/100.0
+  tax_rate = TAX_RATES[invoice[:tax_code]] || 0
+  invoice[:tax_rate] = tax_rate
+  net_total = (total/(1.0+tax_rate/100.0))
+  invoice[:tax_total] = '%.2f' % (net_total*tax_rate/100.0)
+  invoice[:net_total] = '%.2f' % net_total
+  invoice[:total] = '%.2f' % total
+
+  # FIXME take these strings from config/locale
+  outro = ""
+  if tax_rate == 0
+    outro = "Steuerfreie Ausfuhrlieferungen nach § 4 Nr. 1a UStG in Verbindung mit § 6 UStG."
+  end
+  terms = "Bitte begleichen Sie die Rechnung innerhalb von 7 Tagen ab Rechnungsdatum."
+  if invoice[:invoice_payment_method].match(/paypal/i)
+    terms = "Die Rechnung wurde bereits per PayPal bezahlt."
+  elsif invoice[:invoice_payment_method].match(/cash/i)
+    terms = "Die Rechnung wurde bereits bar bezahlt."
+  end
+
+  
+  erb :invoice, :locals => {
+        :invoice => invoice,
+        :sender_address_lines => COMPANY_ADDRESS.split("\n"),
+        :sender_bank_lines => COMPANY_BANK.split("\n"),
+        :sender_legal_lines => COMPANY_LEGAL.split("\n"),
+        :terms => terms,
+        :outro => outro,
+	      :prefix => PREFIX
+      }
+end
+
+post PREFIX+'/invoices' do
+  content_type 'application/json'
+  book.reload_book
+  
+  # create a new invoice by posting a html form or JSON data
+  # or update existing invoice depending on ID
+  
+  # an invoice is:
+  # - a transaction from a customer subaccount to a sales subaccount
+  # - a document that can be rendered
+  # - receipt_url of transaction can point to the pdf renderer
+
+  request.body.rewind
+  payload = JSON.parse(request.body.read)
+
+  year = Date.today.year
+  
+  invoices=book.book_rows.select do |b|
+    if !b[:invoice_id].nil?
+      b[:invoice_id].match(/^#{year}/)
+    else
+      false
     end
   end
 
-  "OK"
+  invoice_ids=invoices.map do |i|
+    i[:invoice_id].split("-").last.to_i
+  end
+  invoice_ids.push(0)
+  
+  iid = invoice_ids.sort.last+1
+  
+  formatted_iid = "#{year}-#{iid.to_s.rjust(4,'0')}"
+
+  payload[:invoice_id] = formatted_iid
+  payload[:debit_txn_id] = formatted_iid
+  payload[:details] = "Invoice #{formatted_iid}"
+
+  payload[:receipt_url] = "/invoices/#{formatted_iid}"
+
+  payload = OpenStruct.new(payload)
+  
+  book.create_booking(payload,false)
+  
+  pp payload
+  payload.to_h.to_json
 end
 
-get PREFIX+'/invoices' do
+get PREFIX+'/import-invoices' do
   content_type 'text/plain;charset=utf8'
 
-  invoices = import_outgoing_invoices(book)
-
+  invoices = book.import_outgoing_invoices()
   invoices.to_s
 end
 
@@ -884,7 +1059,7 @@ get PREFIX+'/todo' do
         :bookings => rows,
         :documents => documents,
         :accounts => accounts,
-	:prefix => PREFIX
+	      :prefix => PREFIX
       }
 end
 
@@ -897,7 +1072,7 @@ get PREFIX+'/book' do
   
   erb :book, :locals => {
         :bookings => book.book_rows.map(&method(:book_row_to_hash)),
-	:prefix => PREFIX
+	      :prefix => PREFIX
       }
 end
 
