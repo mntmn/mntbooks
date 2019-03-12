@@ -592,7 +592,7 @@ SQL
 
         iid+=1
 
-        booking = book.bookings_by_invoice_id[formatted_iid]
+        booking = bookings_by_invoice_id[formatted_iid]
         if booking
           puts "  '-- existing booking: #{booking[0]}"
         else
