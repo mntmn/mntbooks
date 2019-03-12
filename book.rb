@@ -947,9 +947,10 @@ get PREFIX+'/invoices/:id' do
       ils.push({
         "title" => il_raw[0],
         "quantity" => il_raw[1],
-        "price" => il_raw[2],
+        "price_cents" => il_raw[2]*100.0,
         "description" => il_raw[3],
-        "sum" => il_raw[1].to_f*il_raw[2].to_f
+        "amount_cents" => il_raw[1].to_f*il_raw[2].to_f*100.0,
+        "sku" => ""
       })
     end
     invoice[:invoice_lines] = ils
@@ -991,13 +992,15 @@ post PREFIX+'/invoices' do
   content_type 'application/json'
   book.reload_book
   
-  # create a new invoice by posting a html form or JSON data
+  # create a new invoice by posting JSON data
   # or update existing invoice depending on ID
   
   # an invoice is:
   # - a transaction from a customer subaccount to a sales subaccount
   # - a document that can be rendered
   # - receipt_url of transaction can point to the pdf renderer
+
+  # TODO input validation
 
   request.body.rewind
   payload = JSON.parse(request.body.read)
