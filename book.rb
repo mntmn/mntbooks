@@ -516,7 +516,7 @@ SQL
     # date,amount,currency,account1,account2,paymentMethod,company,name,addr1,addr2,zip,city,state,country,ordernum,items
 
     reload_book
-    docs = fetch_all_documents
+    docs = fetch_all_documents(book)
     
     paths = Dir.glob(INVOICES_CSV_FOLDER+"/**.csv").sort
     paths.each do |path|
