@@ -677,7 +677,7 @@ def make_receipt_urls(raw_receipt_url)
       if r=="none"
         r=""
       elsif r[0]!="/"
-        r = "/pdf/#{r}"
+        r = "#{PREFIX}/pdf/#{r}"
       end
       receipt_urls.push(r)
     end
