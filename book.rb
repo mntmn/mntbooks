@@ -596,7 +596,7 @@ SQL
         if booking
           puts "  '-- existing booking: #{booking[0]}"
         else
-          book.create_booking(data,false)
+          create_booking(data,false)
           puts "  '-- new booking created"
         end
       end
