@@ -1,5 +1,4 @@
 * { font-family: "Inter", "Inter UI", "Helvetica Neue", sans-serif; }
-td, th { border-bottom: 1px solid #999; padding: 5px; text-align: left; }
 .amount { text-align: right; }
 .credit-bank .amount { font-weight: bold; }
 .date { white-space: nowrap; }
@@ -26,11 +25,16 @@ input.account {
 }
 
 a {
-    color: #333;
+    color: #555;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
 }
 
 a:visited {
-    color: #333;
+    color: #555;
 }
 
 nav {
@@ -46,4 +50,18 @@ nav span {
     display: inline-block;
     position: relative;
     top: 19px;
+}
+
+tr:nth-child(even) {
+    background: #f8f8f8;
+}
+
+td, th {
+    border-bottom: 1px solid #999;
+    padding: 5px;
+    text-align: left;
+}
+
+table {
+    border-collapse: collapse;
 }
