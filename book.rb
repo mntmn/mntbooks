@@ -581,14 +581,15 @@ SQL
           credit_account: credit_acc,
           debit_txn_id: formatted_iid,
           tax_code: tax_code,
-          details: "Invoice #{formatted_iid}"
+          details: "Invoice #{formatted_iid}",
+          receipt_url: "/invoices/#{formatted_iid}"
         }
 
-        docs.each do |d|
-          if d[:title].match(formatted_iid) then
-            data[:receipt_url] = d[:path].split("/").last
-          end
-        end
+        #docs.each do |d|
+        #  if d[:title].match(formatted_iid) then
+        #    data[:receipt_url] = d[:path].split("/").last
+        #  end
+        #end
 
         iid+=1
 
@@ -907,9 +908,12 @@ get PREFIX+'/invoices' do
   
   invoices=invoices.map do |i|
     i[:receipt_urls] = make_receipt_urls(i[:receipt_url])
+    if !i.invoice_id.nil?
+      i[:receipt_urls].push(PREFIX+"/invoices/#{i.invoice_id}")
+    end
     i
   end
-  
+    
   erb :invoices, :locals => {
         :invoices => invoices,
 	      :prefix => PREFIX

@@ -1,45 +1,61 @@
-<h2>
-  MNT Book &nbsp;
-  
-  <% if active == :book %>
-  Booked |
-  <% else %>
-  <a href="<%= prefix %>/book">Booked</a> |
-  <% end %>
-  
-  <% if active == :todo %>
-  Unbooked |
-  <% else %>
-  <a href="<%= prefix %>/todo">Unbooked</a> |
-  <% end %>
-  
-  <% if active == :docs_unfiled %>
-  Docs |
-  <% else %>
-  <a href="<%= prefix %>/documents?state=unfiled">Docs</a> |
-  <% end %>
-  
-  <% if active == :docs_todo %>
-  Docs (Todo) |
-  <% else %>
-  <a href="<%= prefix %>/documents?state=todo">Docs (Todo)</a> |
-  <% end %>
-  
-  <% if active == :docs_defer %>
-  Docs (Defer) |
-  <% else %>
-  <a href="<%= prefix %>/documents?state=defer">Docs (Defer)</a> |
-  <% end %>
+<nav>
+  <span id="logo">
+  <b><img src="<%= prefix %>/dist/mnt-logo-2015.png"> Books</b>
+  </span>
 
-  <% if active == :invoices %>
-  Invoices |
+  <span>
+  <% if active == :book %>
+  Booked
   <% else %>
-  <a href="<%= prefix %>/invoices">Invoices</a> |
+  <a href="<%= prefix %>/book">Booked</a>
   <% end %>
+  </span>
   
+  <span>
+  <% if active == :todo %>
+  Unbooked
+  <% else %>
+  <a href="<%= prefix %>/todo">Unbooked</a>
+  <% end %>
+  </span>
+  
+  <span>
+  <% if active == :docs_unfiled %>
+  Docs
+  <% else %>
+  <a href="<%= prefix %>/documents?state=unfiled">Docs</a>
+  <% end %>
+  </span>
+  
+  <span>
+  <% if active == :docs_todo %>
+  Todo
+  <% else %>
+  <a href="<%= prefix %>/documents?state=todo">Todo</a>
+  <% end %>
+  </span>
+  
+  <span>
+  <% if active == :docs_defer %>
+  Defer
+  <% else %>
+  <a href="<%= prefix %>/documents?state=defer">Defer</a>
+  <% end %>
+  </span>
+
+  <span>
+  <% if active == :invoices %>
+  Invoices
+  <% else %>
+  <a href="<%= prefix %>/invoices">Invoices</a>
+  <% end %>
+  </span>
+  
+  <span>
   <% if active == :new_invoice %>
   New Invoice
   <% else %>
   <a href="<%= prefix %>/invoices/new">New Invoice</a>
   <% end %>
-</h2>
+  </span>
+</nav>

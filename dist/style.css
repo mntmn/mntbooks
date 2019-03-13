@@ -1,9 +1,12 @@
-* { font-family: "Inter UI", "Helvetica Neue", sans-serif; }
+* { font-family: "Inter", "Inter UI", "Helvetica Neue", sans-serif; }
 td, th { border-bottom: 1px solid #999; padding: 5px; text-align: left; }
 .amount { text-align: right; }
 .credit-bank .amount { font-weight: bold; }
 .date { white-space: nowrap; }
-body { margin: 30px; }
+body {
+    margin: 30px;
+    margin-left: 60px;
+}
 .details { width: 640px; }
 
 .list img {
@@ -22,3 +25,25 @@ input.account {
     width: 300px;
 }
 
+a {
+    color: #333;
+}
+
+a:visited {
+    color: #333;
+}
+
+nav {
+    margin-bottom: 40px;
+}
+
+nav span {
+    margin-right: 20px;
+}
+
+#logo img {
+    width: 48px;
+    display: inline-block;
+    position: relative;
+    top: 19px;
+}

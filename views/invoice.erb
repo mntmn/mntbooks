@@ -212,12 +212,12 @@
         <tr>
           <td class="pos"><%= i=i+1 %> </td>
           <td class="amount"><%= p["quantity"] %></td>
-          <td class="price"><%= p["price_cents"]/100.0 %></td>
+          <td class="price"><%= '%.2f' % (p["price_cents"].to_f/100.0) %></td>
           <td>
             <h5><%= p["title"] %></h5>
             <p><%= p["description"] %></p>
           </td>
-          <td class="sum"><%= p["amount_cents"]/100.0 %></td>
+          <td class="sum"><%= '%.2f' % (p["amount_cents"].to_f/100.0) %></td>
         </tr>
         <% end %>  
         

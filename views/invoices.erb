@@ -12,7 +12,6 @@
           <th>Amt</th>
           <th>Debit</th>
           <th>Credit</th>
-          <th>Method</th>
           <th class="details">Name</th>
           <th>Receipt</th>
         </tr>
@@ -23,8 +22,7 @@
           <td class="amount"><%= '%.2f' % (b[:amount_cents]/100.0) %></td>
           <td><%= b[:debit_account] %></td>
           <td><%= b[:credit_account] %></td>
-          <td><%= b[:invoice_payment_method] %></td>
-          <td class="details"><%= b[:invoice_company] %><br><%= b[:invoice_name] %></td>
+          <td class="details"><% if b[:invoice_company].size>0 %><%= b[:invoice_company] %><br><% end %><%= b[:invoice_name] %></td>
           <td>
             <% b[:receipt_urls].each do |r| %>
               <a href="<%= r %>"><%= r %></a>
