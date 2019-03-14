@@ -951,7 +951,7 @@ get PREFIX+'/invoices/:id' do
       ils.push({
         "title" => il_raw[0],
         "quantity" => il_raw[1],
-        "price_cents" => il_raw[2]*100.0,
+        "price_cents" => il_raw[2].to_f*100.0,
         "description" => il_raw[3],
         "amount_cents" => il_raw[1].to_f*il_raw[2].to_f*100.0,
         "sku" => ""
