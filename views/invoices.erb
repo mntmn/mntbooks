@@ -9,13 +9,14 @@
         <tr>
           <th>Date</th>
           <th>Cr</th>
-          <th>Amt</th>
+          <th class="amount">Amt</th>
           <th>Debit</th>
           <th>Credit</th>
           <th class="details">Name</th>
           <th>Receipt</th>
         </tr>
-        <% invoices.each do |b| %>
+        <% months.keys.each do |mk| %>
+        <% months[mk][:invoices].each do |b| %>
         <tr>
           <td class="date"><%= b[:date] %></td>
           <td class="amount"><%= b[:currency] %></td>
@@ -25,11 +26,22 @@
           <td class="details"><% if b[:invoice_company].size>0 %><%= b[:invoice_company] %><br><% end %><%= b[:invoice_name] %></td>
           <td>
             <% b[:receipt_urls].each do |r| %>
-              <a href="<%= r %>"><%= r %></a>
+            <a href="<%= r %>"><%= r %></a>
             <% end %>
           </td>
         </tr>
         <% end %>
+        <tr class="month-row">
+          <td class="date"></td>
+          <td></td>
+          <td class="amount"><%= '%.2f' % (months[mk][:sum_cents]/100.0) %></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <% end %>
+        
       </table>
     </form>
   </body>

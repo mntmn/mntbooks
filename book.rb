@@ -901,6 +901,8 @@ end
 get PREFIX+'/invoices' do
   # display a table of all documents with doctype == invoice
   book.reload_book
+
+  months={}
   
   invoices=book.book_rows.select do |b|
     !b[:invoice_id].nil? && b[:invoice_id].size>0
@@ -911,11 +913,24 @@ get PREFIX+'/invoices' do
     if !i.invoice_id.nil?
       i[:receipt_urls].push(PREFIX+"/invoices/#{i.invoice_id}")
     end
+
+    date = Date.parse(i[:date])
+    month_key = "#{date.year}-#{date.month}"
+    if !months[month_key]
+      months[month_key]={
+        :invoices => [],
+        :sum_cents => 0
+      }
+    end
+    months[month_key][:invoices].push(i)
+    months[month_key][:sum_cents]+=i[:amount_cents]
+    
     i
   end
     
   erb :invoices, :locals => {
-        :invoices => invoices,
+        :months => months,
+        #:invoices => invoices,
 	      :prefix => PREFIX
       }
 end

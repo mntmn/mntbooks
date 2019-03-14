@@ -67,3 +67,9 @@ td, th {
 table {
     border-collapse: collapse;
 }
+
+tr.month-row td {
+    padding-bottom: 40px;
+    font-weight: bold;
+}
+
