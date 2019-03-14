@@ -19,7 +19,7 @@
         <tr>
           <td class="date"><%= b[:date] %></td>
           <td class="amount"><%= b[:currency] %></td>
-          <td class="amount"><%= '%.2f' % (b[:amount]/100.0) %></td>
+          <td class="amount"><%= '%.2f' % (b[:amount_cents]/100.0) %></td>
           <% if b[:details_line_1] %>
           <td class="details"><%= b[:details_line_1] %><br><%= b[:details_line_2] %></td>
           <% else %>

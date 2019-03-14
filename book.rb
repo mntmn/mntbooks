@@ -136,7 +136,7 @@ class Book
   end
 
   def create_booking(booking,auto_route)
-    new_row = ["",booking[:date],booking[:amount],booking[:details],booking[:currency],booking[:receipt_url],booking[:tax_code],booking[:debit_account],booking[:credit_account],booking[:debit_txn_id],booking[:credit_txn_id],booking[:order_id],booking[:invoice_id],booking[:invoice_lines],booking[:invoice_payment_method],booking[:invoice_company],booking[:invoice_name],booking[:invoice_address_1],booking[:invoice_address_2],booking[:invoice_zip],booking[:invoice_city],booking[:invoice_state],booking[:invoice_country]]
+    new_row = ["",booking[:date],booking[:amount_cents],booking[:details],booking[:currency],booking[:receipt_url],booking[:tax_code],booking[:debit_account],booking[:credit_account],booking[:debit_txn_id],booking[:credit_txn_id],booking[:order_id],booking[:invoice_id],booking[:invoice_lines],booking[:invoice_payment_method],booking[:invoice_company],booking[:invoice_name],booking[:invoice_address_1],booking[:invoice_address_2],booking[:invoice_zip],booking[:invoice_city],booking[:invoice_state],booking[:invoice_country]]
 
     customer_routing = false
     orig_debit_acc = nil
@@ -563,7 +563,7 @@ SQL
         
         data = {
           date: row[0].split(" ").first,
-          amount: (row[1].to_f*100).to_i,
+          amount_cents: (row[1].to_f*100).to_i,
           currency: row[2],
           invoice_id: formatted_iid,
           invoice_payment_method: row[5],
@@ -660,7 +660,7 @@ def bank_row_to_hash(b)
   return {
     :id => b[0],
     :date => b[1][0..9],
-    :amount => b[2],
+    :amount_cents => b[2],
     :currency => b[5],
     :details => desc[:details],
     :details_line_1 => desc[:details_line_1]||desc[:details],
@@ -1106,11 +1106,11 @@ get PREFIX+'/ledger' do
   book.book_rows.reverse.map do |r|
     h = book_row_to_hash(r)
     out+="#{h[:date]} * Transaction\n"
-    if h[:amount]<0
-      out+="\t#{h[:debit_account]||"unknown"}\t\t#{h[:currency]} #{-h[:amount]/100.0}\n"
+    if h[:amount_cents]<0
+      out+="\t#{h[:debit_account]||"unknown"}\t\t#{h[:currency]} #{-h[:amount_cents]/100.0}\n"
       out+="\t#{h[:credit_account]||"unknown"}\n\n"
     else
-      out+="\t#{h[:credit_account]||"unknown"}\t\t#{h[:currency]} #{h[:amount]/100.0}\n"
+      out+="\t#{h[:credit_account]||"unknown"}\t\t#{h[:currency]} #{h[:amount_cents]/100.0}\n"
       out+="\t#{h[:debit_account]||"unknown"}\n\n"
     end
   end
