@@ -1047,7 +1047,7 @@ post PREFIX+'/invoices' do
   payload[:debit_txn_id] = formatted_iid
   payload[:details] = "Invoice #{formatted_iid}"
 
-  payload[:receipt_url] = "/invoices/#{formatted_iid}"
+  #payload[:receipt_url] = "/invoices/#{formatted_iid}"
 
   payload = OpenStruct.new(payload)
   
