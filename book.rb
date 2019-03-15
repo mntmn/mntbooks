@@ -26,6 +26,10 @@ TAX_RATES = {
   "EU7" => 7
 }
 
+PDFKit.configure do |config|
+  config.wkhtmltopdf = "#{Dir.pwd}/wkhtmltopdf.sh"
+end
+
 class Book
   attr_accessor :acc_id, :bookings_for_debit_acc, :bookings_for_credit_acc, :book_rows, :bank_rows, :bookings_todo, :bookings_by_txn_id
   attr_accessor :bookings_by_receipt_url, :bookings_by_invoice_id, :invoices_by_customer, :document_state_by_path
