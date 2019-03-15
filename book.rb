@@ -770,15 +770,17 @@ def fetch_all_documents(book)
     end
 
     state = "unfiled"
-    booking_id = nil
+    booking_ids = []
     if book.bookings_by_receipt_url[pdfname]
       state = "booked"
-      booking_id = book.bookings_by_receipt_url[pdfname]
+      booking_ids = book.bookings_by_receipt_url[pdfname].map {|b| b[:id]}
     else
       state = book.get_document_state(pdfname)
     end
 
     # FIXME why are these 2 linked structures instead of one?
+
+    puts "   '-- #{state} #{booking_id} #{pdfname}"
     
     metadata = book.get_document_metadata(pdfname)
     
@@ -791,7 +793,7 @@ def fetch_all_documents(book)
                 state: state,
                 metadata: metadata,
                 id: Digest::MD5.hexdigest(path),
-                booking_id: booking_id
+                booking_ids: booking_ids
               })
   end
 
