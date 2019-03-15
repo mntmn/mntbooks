@@ -1090,7 +1090,6 @@ get PREFIX+'/todo' do
   
   accounts = (debit_accounts+credit_accounts+default_accounts).sort.uniq
   documents = JSON.generate(book.get_all_documents.map(&:to_h))
-  invoices = book.get_all_invoices
   
   erb :todo, :locals => {
         :bookings => rows,
