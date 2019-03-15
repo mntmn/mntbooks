@@ -7,6 +7,7 @@ require 'sinatra'
 require 'pry'
 require 'csv'
 require 'ostruct'
+require 'pdfkit'
 
 include ERB::Util
 
@@ -911,6 +912,7 @@ get PREFIX+'/invoices' do
     i[:receipt_urls] = make_receipt_urls(i[:receipt_url])
     if !i.invoice_id.nil?
       i[:receipt_urls].push(PREFIX+"/invoices/#{i.invoice_id}")
+      i[:receipt_urls].push(PREFIX+"/invoices/#{i.invoice_id}?pdf=1")
     end
 
     date = Date.parse(i[:date])
@@ -929,7 +931,6 @@ get PREFIX+'/invoices' do
     
   erb :invoices, :locals => {
         :months => months,
-        #:invoices => invoices,
 	      :prefix => PREFIX
       }
 end
@@ -993,17 +994,27 @@ get PREFIX+'/invoices/:id' do
   elsif invoice[:invoice_payment_method].match(/cash/i)
     terms = "Die Rechnung wurde bereits bar bezahlt."
   end
-
   
-  erb :invoice, :locals => {
-        :invoice => invoice,
-        :sender_address_lines => COMPANY_ADDRESS.split("\n"),
-        :sender_bank_lines => COMPANY_BANK.split("\n"),
-        :sender_legal_lines => COMPANY_LEGAL.split("\n"),
-        :terms => terms,
-        :outro => outro,
-	      :prefix => PREFIX
-      }
+  html = erb :invoice, :locals => {
+               :invoice => invoice,
+               :sender_address_lines => COMPANY_ADDRESS.split("\n"),
+               :sender_bank_lines => COMPANY_BANK.split("\n"),
+               :sender_legal_lines => COMPANY_LEGAL.split("\n"),
+               :terms => terms,
+               :outro => outro,
+	             :prefix => PREFIX
+             }
+
+  if params["pdf"]
+    content_type 'application/pdf'
+    kit = PDFKit.new(html, :page_size => 'A4')
+    pdf_path = "#{DOC_FOLDER}/invoice-#{invoice[:invoice_id]}.pdf"
+    file = kit.to_file(pdf_path)
+    file
+  else
+    html
+  end
+  
 end
 
 post PREFIX+'/invoices' do
@@ -1074,7 +1085,8 @@ get PREFIX+'/todo' do
   default_accounts = ["furniture","tools","consumables","packaging","computers","monitors","computers:input","computers:network","machines","parts:other","parts:reform","parts:va2000","parts:zz9000","sales:reform","sales:va2000","sales:zz9000","sales:services","sales:other","services:legal:taxadvisor","services:legal:notary","services:legal:ip","services:legal:lawyer","taxes:ust","taxes:gwst","taxes:kst","taxes:other","banking","shares","services:design","services:other","shipping","literature","capital-reserve"]
   
   accounts = (debit_accounts+credit_accounts+default_accounts).sort.uniq
-  documents = JSON.generate(book.get_all_documents)
+  documents = JSON.generate(book.get_all_documents.map(&:to_h))
+  invoices = book.get_all_invoices
   
   erb :todo, :locals => {
         :bookings => rows,

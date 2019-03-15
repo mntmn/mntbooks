@@ -26,7 +26,7 @@
           <td class="details"><% if b[:invoice_company].size>0 %><%= b[:invoice_company] %><br><% end %><%= b[:invoice_name] %></td>
           <td>
             <% b[:receipt_urls].each do |r| %>
-            <a href="<%= r %>"><%= r %></a>
+            <a href="<%= r %>">📄 <%= r.split('/').last.sub("?pdf=1"," PDF") %></a>
             <% end %>
           </td>
         </tr>
