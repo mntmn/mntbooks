@@ -689,7 +689,6 @@ end
 # select id,debit_account,debit_txn_id,credit_account,credit_txn_id,date,amount,details,receipt_url,currency from book;
 def book_row_to_hash(b)  
   klass = ""
-  amount = b[:amount_cents]
   if !b[:credit_account].nil? && b[:credit_account].match("assets:bank-")
     klass = "credit-bank"
   end
@@ -701,7 +700,7 @@ def book_row_to_hash(b)
     :id => b[:id],
     :date => b[:date][0..9],
     :currency => b[:currency].sub("EUR","€"),
-    :amount => amount,
+    :amount_cents => b[:amount_cents],
     :debit_account => b[:debit_account],
     :credit_account => b[:credit_account],
     :details => desc[:details],
