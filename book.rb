@@ -746,6 +746,8 @@ def fetch_all_documents(book)
     thumbpath = THUMB_FOLDER+"/"+thumbname
     textpath = THUMB_FOLDER+"/"+textname
 
+    puts "~~ PDF: #{path} ~~"
+    
     # TODO: move this to the background / ocr cron
     
     if !File.exist?(thumbpath) then
