@@ -294,7 +294,7 @@ SQL
 
       new_booking = {
         :date => date,
-        :amount => amount,
+        :amount_cents => amount,
         :details => details,
         :currency => "EUR",
         :tax_code => ""
@@ -306,7 +306,7 @@ SQL
           # we paid money
           # there is no booking / receipt. can we create one automatically?
 
-          new_booking[:amount] = -amount # only positive amounts are transferred
+          new_booking[:amount_cents] = -amount # only positive amounts are transferred
           new_booking[:debit_account] = acc_key
           new_booking[:debit_txn_id] = row[0]
           
@@ -352,7 +352,7 @@ SQL
       
       new_booking = {
         :date => date,
-        :amount => amount,
+        :amount_cents => amount,
         :details => details,
         :currency => currency,
         :tax_code => ""
@@ -1093,11 +1093,26 @@ get PREFIX+'/todo' do
   default_accounts = ["furniture","tools","consumables","packaging","computers","monitors","computers:input","computers:network","machines","parts:other","parts:reform","parts:va2000","parts:zz9000","sales:reform","sales:va2000","sales:zz9000","sales:services","sales:other","services:legal:taxadvisor","services:legal:notary","services:legal:ip","services:legal:lawyer","taxes:ust","taxes:gwst","taxes:kst","taxes:other","banking","shares","services:design","services:other","shipping","literature","capital-reserve"]
   
   accounts = (debit_accounts+credit_accounts+default_accounts).sort.uniq
-  documents = JSON.generate(book.get_all_documents.map(&:to_h))
+  documents = book.get_all_documents.map(&:to_h)
+  
+  invoices=book.book_rows.select do |b|
+    !b[:invoice_id].nil? && b[:invoice_id].size>0
+  end
+
+  # FIXME: kludge
+  invoices=invoices.map do |i|
+    {
+      :path => i[:receipt_url],
+      :docid => "#{i[:invoice_id]}",
+      :sum => i[:amount_cents]/100,
+      :tags => "invoice,#{i[:debit_account]}"
+    }
+  end
+  pp invoices
   
   erb :todo, :locals => {
         :bookings => rows,
-        :documents => documents,
+        :documents => [documents,invoices].flatten,
         :accounts => accounts,
 	      :prefix => PREFIX
       }
