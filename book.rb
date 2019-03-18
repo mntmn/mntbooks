@@ -557,7 +557,7 @@ SQL
           
           fname = "#{dirname}/#{date}-#{amount}#{currency}-#{tags.join('-')}"
           puts "#{fname} <- #{row[:path]}"
-          src = DOC_FOLDER+"/"+r
+          src = DOC_FOLDER+"/"+row[:path]
           FileUtils.cp(src,fname)
         end
       end
