@@ -473,6 +473,7 @@ SQL
   end
 
   # FIXME some filenames can contain ",", sanitize!
+  # TODO export CASH receipts
   
   def export_quarter
     rows = @book_db.execute <<-SQL
@@ -488,8 +489,8 @@ SQL
         #puts "Warning: no credit_account"
       elsif receipt.nil? || !receipt || receipt == "none"
         #puts "Warning: no receipt"
-      elsif row[:debit_account]=="external" || row[2]=="external"
-      elsif row[:debit_account].match(/^customer:/)
+      elsif row[:debit_account]=="external"
+      elsif row[:credit_account].match(/^customer:/)
       else
         receipt = receipt.split('#')[0]
         date = row[:date][0..9]
@@ -504,14 +505,60 @@ SQL
 
         Dir.mkdir(EXPORT_FOLDER) unless File.exists?("export")
         Dir.mkdir("#{EXPORT_FOLDER}/#{subdir}") unless File.exists?("export/#{subdir}")
+
+        subdir_category = "incoming-invoices-non-resale"
+        if credit.match /(parts|packaging|shipping)/
+          subdir_category = "incoming-invoices-resale"
+        elsif credit.match /sales/
+          subdir_category = "outgoing-invoices"
+        end
         
-        dirname = "#{EXPORT_FOLDER}/#{subdir}/#{date}-#{amount}#{currency}-#{debit}-#{credit}"
+        dirname = "#{EXPORT_FOLDER}/#{subdir}/#{subdir_category}"
         Dir.mkdir(dirname) unless File.exists?(dirname)
         
         receipt.split(",").each do |r|
-          puts "#{dirname} <- #{r}"
+          unless receipt[0]=="/"
+            fname = "#{dirname}/#{date}-#{amount}#{currency}-#{r}"
+            #puts "#{fname} <- #{r}"
+            src = DOC_FOLDER+"/"+r
+            FileUtils.cp(src,fname)
+          end
+        end
+      end
+    end
+
+    # FIXME these should also be booked as cash transactions
+    # FIXME extract documents that have a sum but no associated booking
+    
+    rows = @book_db.execute <<-SQL
+select path,state,docid,date,sum,tags from documents order by date desc;
+SQL
+    rows.each do |row|
+      row = OpenStruct.new(row)
+
+      if !row[:tags].nil?
+        tags = row[:tags].split(",")
+        pp tags
+        if tags.include?("cash")
+          date = row[:date][0..9]
+          amount = row[:sum]
+          currency = "EUR" # FIXME
+          
+          mon = date[5..6].to_i
+          quarter = (mon-1)/3+1
+          subdir = "#{date[0..3]}Q#{quarter}"
+
+          Dir.mkdir(EXPORT_FOLDER) unless File.exists?("export")
+          Dir.mkdir("#{EXPORT_FOLDER}/#{subdir}") unless File.exists?("export/#{subdir}")
+
+          subdir_category = "incoming-invoices-cash-non-resale"
+          dirname = "#{EXPORT_FOLDER}/#{subdir}/#{subdir_category}"
+          Dir.mkdir(dirname) unless File.exists?(dirname)
+          
+          fname = "#{dirname}/#{date}-#{amount}#{currency}-#{tags.join('-')}"
+          puts "#{fname} <- #{row[:path]}"
           src = DOC_FOLDER+"/"+r
-          FileUtils.cp(src,dirname)
+          FileUtils.cp(src,fname)
         end
       end
     end
