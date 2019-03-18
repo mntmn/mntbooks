@@ -1046,9 +1046,9 @@ get PREFIX+'/invoices/:id' do
   end
   terms = "Bitte begleichen Sie die Rechnung innerhalb von 7 Tagen ab Rechnungsdatum."
   if invoice[:invoice_payment_method].match(/paypal/i)
-    terms = "Die Rechnung wurde bereits per PayPal bezahlt."
+    terms = "Die Rechnung wurde bereits per PayPal beglichen."
   elsif invoice[:invoice_payment_method].match(/cash/i)
-    terms = "Die Rechnung wurde bereits bar bezahlt."
+    terms = "Die Rechnung wurde bereits bar beglichen."
   end
   
   html = erb :invoice, :locals => {

@@ -77,9 +77,9 @@
             items.push({
               title: titleEl.value,
               quantity: parseInt(amountEl.value),
-              price: parseFloat(priceEl.value),
+              price_cents: parseFloat(priceEl.value)*100,
               description: descEl.value,
-              sum: sum
+              amount_cents: parseFloat(sum)*100
             })
           } else {
             break
