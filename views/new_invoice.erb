@@ -8,7 +8,7 @@
     <%= erb :menu, :locals => { :active => :new_invoice, :prefix => prefix } %>
     <header>
       <div id="recipient-addr" style="width:300px">
-        <input type="text" autofocus id="debit_account" class="account" placeholder="Debit Account" onchange="recalc()"><br>
+        <input type="text" autofocus id="debit_account" class="account" placeholder="Debit Account" onblur="autoFillAddress()"><br>
         <input type="text" id="credit_account" class="account" placeholder="Credit Account" value="sales" onchange="recalc()"><br>
         <input type="text" id="name" placeholder="Name" onchange="recalc()"><br>
         <input type="text" id="company" placeholder="Company" onchange="recalc()"><br>
@@ -107,8 +107,9 @@
         var paymentMethod = document.getElementById("payment-method").value
 
         bookRow = {
+          iid: document.getElementById("iid").value,
           date: document.getElementById("idate").value,
-          amount: grandTotal*100,
+          amount_cents: grandTotal*100,
           currency: "EUR",
           debit_account: document.getElementById("debit_account").value,
           credit_account: document.getElementById("credit_account").value,
@@ -219,7 +220,7 @@
 
 <script src="../dist/auto-complete.min.js"></script>
 <script>
-  var sourceFunc = function(term, suggest) {
+  function sourceFunc(term, suggest) {
     term = term.toLowerCase()
     var choices = <%= customers %>
       var matches = []
@@ -235,6 +236,23 @@
       source: sourceFunc
     })
   }
+
+  function autoFillAddress(evt) {
+    var el = document.getElementById("debit_account")
+    if (el.value && addresses[el.value]) {
+      var a = addresses[el.value]
+      document.getElementById("name").value = a.name
+      document.getElementById("company").value = a.company
+      document.getElementById("addr1").value = a.addr1
+      document.getElementById("addr2").value = a.addr2
+      document.getElementById("zip").value = a.zip
+      document.getElementById("city").value = a.city
+      document.getElementById("state").value = a.state
+      document.getElementById("country").value = a.country
+    }
+  }
+
+  var addresses = <%= addresses.to_json %>
   </script>
 </body>
 </html>

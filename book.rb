@@ -371,7 +371,9 @@ SQL
       if txn_type=="Transfer" || txn_type=="Authorization"
         # TODO: update matching bank transfer with txn id
       elsif status!="Completed" && status!="Refunded"
-        # TODO: not sure what to do with pending txns... maybe display somewhere else  
+        # TODO: not sure what to do with pending txns... maybe display somewhere else
+      elsif txn_type.match(/Currency Conversion/) || txn_type.match(/Fee Reversal/)
+        # TODO: later we can book these to currency exchange accounts?
       else
         if amount<0
           # negative amounts are debited from the account
@@ -614,6 +616,15 @@ SQL
 end
 
 def clean_bank_row_description(raw_desc)
+
+  if raw_desc[0..1]=="PP"
+    return {
+      :details => raw_desc,
+      :fields => [],
+      :iban => nil
+    }
+  end
+  
   iban_rx = /[A-Z0-9]+ [A-Z]{2}[0-9]{2}[A-Z0-9]{8,}/
 
   fields = raw_desc.scan(/([A-Z]{4}[\+\-][^ ]+)/)
@@ -944,10 +955,32 @@ end
 get PREFIX+'/invoices/new' do
   # new invoice form
 
+  book.reload_book
   customers=book.customer_accounts
 
+  # create a map of customer accounts to most recent address
+  
+  addresses = {}
+  customers.each do |c|
+    bs = book.bookings_for_debit_acc[c]
+    if !bs.nil?
+      b = bs.values.last
+      addresses[c] = {
+        :company => b[:invoice_company],
+        :name => b[:invoice_name],
+        :addr1 => b[:invoice_address_1],
+        :addr2 => b[:invoice_address_2],
+        :city => b[:invoice_city],
+        :zip => b[:invoice_zip],
+        :state => b[:invoice_state],
+        :country => b[:invoice_country]
+      }
+    end
+  end
+  
   erb :new_invoice, :locals => {
         :customers => customers,
+        :addresses => addresses,
         :prefix => PREFIX,
         :invoice_date => Date.today
       }
@@ -1056,8 +1089,12 @@ post PREFIX+'/invoices' do
   invoice_ids.push(0)
   
   iid = invoice_ids.sort.last+1
-  
   formatted_iid = "#{year}-#{iid.to_s.rjust(4,'0')}"
+
+  if payload["iid"].to_s.size>4
+    # override invoice ID
+    formatted_iid = payload["iid"]
+  end
 
   payload[:invoice_id] = formatted_iid
   payload[:debit_txn_id] = formatted_iid
@@ -1106,7 +1143,6 @@ get PREFIX+'/todo' do
       :tags => "invoice,#{i[:debit_account]}"
     }
   end
-  pp invoices
   
   erb :todo, :locals => {
         :bookings => rows,
