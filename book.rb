@@ -694,9 +694,9 @@ end
 # select id,debit_account,debit_txn_id,credit_account,credit_txn_id,date,amount,details,receipt_url,currency from book;
 def book_row_to_hash(b)  
   klass = ""
-  if !b[:credit_account].nil? && b[:credit_account].match("assets:bank-")
-    klass = "credit-bank"
-  end
+  #if !b[:credit_account].nil? && b[:credit_account].match("assets:bank-")
+  #  klass = "credit-bank"
+  #end
 
   receipt_urls = make_receipt_urls(b[:receipt_url])
   desc = clean_bank_row_description(b[:details])
@@ -704,7 +704,7 @@ def book_row_to_hash(b)
   return {
     :id => b[:id],
     :date => b[:date][0..9],
-    :currency => b[:currency].sub("EUR","€"),
+    :currency => b[:currency], #.sub("EUR","€"),
     :amount_cents => b[:amount_cents],
     :debit_account => b[:debit_account],
     :credit_account => b[:credit_account],
@@ -1122,9 +1122,34 @@ end
 
 get PREFIX+'/book' do
   book.reload_book
+
+  months={}
+  bookings=book.book_rows.map(&method(:book_row_to_hash))
+
+  bookings=bookings.map do |b|
+    date = Date.parse(b[:date])
+    month_key = "#{date.year}-#{date.month}"
+    if !months[month_key]
+      months[month_key]={
+        :bookings => [],
+        :sum_cents => 0
+      }
+    end
+    months[month_key][:bookings].push(b)
+
+    if b[:currency]=="EUR" # FIXME kludge
+      if b[:debit_account].to_s.match("assets:") && !b[:credit_account].to_s.match("assets:")
+        months[month_key][:sum_cents]-=b[:amount_cents]
+      elsif !b[:debit_account].to_s.match("assets:") && (b[:credit_account].to_s.match("assets:") || b[:credit_account].to_s.match("sales:"))
+        months[month_key][:sum_cents]+=b[:amount_cents]
+      end
+    end
+    
+    b
+  end
   
   erb :book, :locals => {
-        :bookings => book.book_rows.map(&method(:book_row_to_hash)),
+        :months => months,
 	      :prefix => PREFIX
       }
 end
