@@ -916,7 +916,7 @@ post PREFIX+'/documents' do
 end
 
 get PREFIX+'/invoices' do
-  # display a table of all documents with doctype == invoice
+  # display a table of all bookings with valid invoice_id
   book.reload_book
 
   months={}
@@ -942,6 +942,23 @@ get PREFIX+'/invoices' do
     end
     months[month_key][:invoices].push(i)
     months[month_key][:sum_cents]+=i[:amount_cents]
+
+    # was the invoice paid? look for a matching crediting transaction
+    i[:paid] = false
+    i[:payments] = []
+
+    credit_bookings = book.bookings_for_credit_acc[i[:debit_account]]
+    if (!credit_bookings.nil?)
+      if (credit_bookings.values.select {|b|
+            # FIXME messy model
+            if b[:receipt_url].to_s.include?(i[:invoice_id])
+              i[:payments].push(b)
+              true
+            end
+          }.size > 0)
+        i[:paid] = true
+      end
+    end
     
     i
   end

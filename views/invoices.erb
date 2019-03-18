@@ -25,8 +25,11 @@
           <td><%= b[:credit_account] %></td>
           <td class="details"><% if b[:invoice_company].size>0 %><%= b[:invoice_company] %><br><% end %><%= b[:invoice_name] %></td>
           <td>
+            <% b[:payments].each do |p| %>
+            <a href="<%= prefix %>/book#<%= p[:id] %>"><%= p[:amount_cents]<0 ? "⎌" : "💰" %> <%= p[:debit_account] %></a><br>
+            <% end %>
             <% b[:receipt_urls].each do |r| %>
-            <a href="<%= r %>">📄 <%= r.split('/').last.sub("?pdf=1"," PDF") %></a>
+            <a href="<%= r %>">📄 <%= r.split('/').last.sub("?pdf=1"," PDF") %></a><br>
             <% end %>
           </td>
         </tr>

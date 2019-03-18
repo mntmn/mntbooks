@@ -17,7 +17,7 @@
         </tr>
         <% months.keys.each do |mk| %>
         <% months[mk][:bookings].each do |b| %>
-        <tr class="<%= b[:css_class] %>">
+        <tr class="<%= b[:css_class] %>" id="<%= b[:id] %>">
           <td class="date"><%= b[:date] %></td>
           <td class="amount"><%= b[:currency] %></td>
           <td class="amount"><%= '%.2f' % (b[:amount_cents]/100.0) %></td>
