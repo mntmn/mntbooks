@@ -779,8 +779,6 @@ def fetch_all_documents(book)
     end
 
     # FIXME why are these 2 linked structures instead of one?
-
-    puts "   '-- #{state} #{booking_id} #{pdfname}"
     
     metadata = book.get_document_metadata(pdfname)
     
@@ -1102,7 +1100,7 @@ get PREFIX+'/todo' do
   # FIXME: kludge
   invoices=invoices.map do |i|
     {
-      :path => i[:receipt_url],
+      :path => "/invoices/#{i[:invoice_id]}",
       :docid => "#{i[:invoice_id]}",
       :sum => i[:amount_cents]/100,
       :tags => "invoice,#{i[:debit_account]}"
