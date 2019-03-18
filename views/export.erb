@@ -1,0 +1,14 @@
+<html>
+  <head>
+    <%= erb :style %>
+  </head>
+  <body>
+    <%= erb :menu, :locals => { :active => :export, :prefix => prefix } %>
+    <h4>Export Quarters</h4>
+    <ul>
+      <% quarters.each do |q| %>
+      <li><a href="<%= prefix %>/export/<%= q %>"><%= q %></li>
+      <% end %>
+    </ul>
+  </body>
+</html>

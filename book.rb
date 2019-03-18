@@ -8,6 +8,7 @@ require 'pry'
 require 'csv'
 require 'ostruct'
 require 'pdfkit'
+require 'zip'
 
 include ERB::Util
 
@@ -476,6 +477,9 @@ SQL
   # TODO export CASH receipts
   
   def export_quarter
+
+    quarters = {}
+    
     rows = @book_db.execute <<-SQL
 select id,debit_account,credit_account,date,amount_cents,receipt_url,invoice_id,currency from book order by date desc;
 SQL
@@ -502,6 +506,7 @@ SQL
         mon = date[5..6].to_i
         quarter = (mon-1)/3+1
         subdir = "#{date[0..3]}Q#{quarter}"
+        quarters[subdir] = true
 
         Dir.mkdir(EXPORT_FOLDER) unless File.exists?("export")
         Dir.mkdir("#{EXPORT_FOLDER}/#{subdir}") unless File.exists?("export/#{subdir}")
@@ -537,8 +542,7 @@ SQL
       row = OpenStruct.new(row)
 
       if !row[:tags].nil?
-        tags = row[:tags].split(",")
-        pp tags
+        tags = row[:tags].split(",").sort
         if tags.include?("cash")
           date = row[:date][0..9]
           amount = row[:sum]
@@ -547,6 +551,7 @@ SQL
           mon = date[5..6].to_i
           quarter = (mon-1)/3+1
           subdir = "#{date[0..3]}Q#{quarter}"
+          quarters[subdir] = true
 
           Dir.mkdir(EXPORT_FOLDER) unless File.exists?("export")
           Dir.mkdir("#{EXPORT_FOLDER}/#{subdir}") unless File.exists?("export/#{subdir}")
@@ -555,7 +560,7 @@ SQL
           dirname = "#{EXPORT_FOLDER}/#{subdir}/#{subdir_category}"
           Dir.mkdir(dirname) unless File.exists?(dirname)
           
-          fname = "#{dirname}/#{date}-#{amount}#{currency}-#{tags.join('-')}"
+          fname = "#{dirname}/#{date}-#{amount}#{currency}-#{tags.join('-')}.pdf"
           puts "#{fname} <- #{row[:path]}"
           src = DOC_FOLDER+"/"+row[:path]
           FileUtils.cp(src,fname)
@@ -563,7 +568,7 @@ SQL
       end
     end
 
-    "OK"
+    quarters.keys
   end
 
   def import_outgoing_invoices()
@@ -1275,7 +1280,29 @@ get PREFIX+'/ledger' do
 end
 
 get PREFIX+'/export' do
-  book.export_quarter
+  quarters = book.export_quarter
+  erb :export, :locals => {
+        :quarters => quarters,
+        :prefix => PREFIX
+      }
+end
+
+# FIXME all of the following need sanitization
+
+get PREFIX+'/export/:name' do
+  path = File.join(EXPORT_FOLDER, params[:name])
+  
+  path.sub!(%r[/$],'')
+  archive = File.join(path,File.basename(path))+'.zip'
+  FileUtils.rm archive, :force=>true
+
+  Zip::File.open(archive, Zip::File::CREATE) do |zipfile|
+    Dir["#{path}/**/**"].reject{|f|f==archive}.each do |file|
+      zipfile.add(file.sub(path+'/',''),file)
+    end
+  end
+  
+  send_file(archive)
 end
 
 get PREFIX+'/pdf/:name' do
