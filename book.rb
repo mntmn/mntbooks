@@ -674,7 +674,7 @@ def bank_row_to_hash(b)
   desc = clean_bank_row_description(b[3])
   
   return {
-    :id => b[0],
+    :id => b[0], # FIXME named indexes
     :date => b[1][0..9],
     :amount_cents => b[2],
     :currency => b[5],
