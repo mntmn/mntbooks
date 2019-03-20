@@ -185,8 +185,12 @@ class Book
     end
   end
 
-  def link_receipt(db,id,receipt_url)
-    db.execute("update book set receipt_url = ? where id = ?", receipt_url, id)
+  def link_receipt(id,receipt_url)
+    @book_db.execute("update book set receipt_url = ? where id = ?", receipt_url, id)
+  end
+
+  def link_invoice_receipt(invoice_id,receipt_url)
+    @book_db.execute("update book set receipt_url=? where invoice_id=? and credit_account like 'sales%' limit 1", receipt_url, invoice_id)
   end
 
   def reload_book
@@ -471,7 +475,6 @@ SQL
   end
 
   # FIXME some filenames can contain ",", sanitize!
-  # TODO export CASH receipts
   
   def export_quarter
     quarters = {}
@@ -606,9 +609,11 @@ SQL
           credit_acc = "sales:va2000"
         end
 
-        tax_code = "NONEU-0"
-        if row[4]=="8400"
-          tax_code = "EU-19"
+        eu = ["AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "EL", "ES", "FI", "FR", "HR", "HU", "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK", "UK", "GB"]
+
+        tax_code = "NONEU0"
+        if eu.include?(row[13])
+          tax_code = "EU19"
         end
 
         # an invoice is:
@@ -1123,6 +1128,10 @@ get PREFIX+'/invoices/:id' do
     kit = PDFKit.new(html, :page_size => 'A4')
     pdf_path = "#{DOC_FOLDER}/invoice-#{invoice[:invoice_id]}.pdf"
     file = kit.to_file(pdf_path)
+
+    # auto book this receipt
+    book.link_invoice_receipt(invoice_id, "/pdf/invoice-#{invoice[:invoice_id}.pdf")
+    
     file
   else
     html
