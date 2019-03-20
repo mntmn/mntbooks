@@ -1130,7 +1130,7 @@ get PREFIX+'/invoices/:id' do
     file = kit.to_file(pdf_path)
 
     # auto book this receipt
-    book.link_invoice_receipt(invoice_id, "/pdf/invoice-#{invoice[:invoice_id]}.pdf")
+    book.link_invoice_receipt(invoice[:invoice_id], "/pdf/invoice-#{invoice[:invoice_id]}.pdf")
     
     file
   else
