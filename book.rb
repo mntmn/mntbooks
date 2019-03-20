@@ -10,6 +10,8 @@ require 'ostruct'
 require 'pdfkit'
 require 'zip'
 
+require './config.rb'
+
 include ERB::Util
 
 DOC_FOLDER = ENV["DOC_FOLDER"]
@@ -17,9 +19,6 @@ THUMB_FOLDER = ENV["THUMB_FOLDER"]
 INVOICES_CSV_FOLDER = ENV["INVOICES_CSV_FOLDER"]
 EXPORT_FOLDER = ENV["EXPORT_FOLDER"]
 PREFIX = ENV["PREFIX"]
-COMPANY_LEGAL = ENV["COMPANY_LEGAL"]
-COMPANY_ADDRESS = ENV["COMPANY_ADDRESS"]
-COMPANY_BANK = ENV["COMPANY_BANK"]
 
 TAX_RATES = {
   "NONEU0" => 0,
@@ -167,8 +166,6 @@ class Book
     id = Digest::MD5.hexdigest(id_raw)
     new_row[0] = id
     
-    pp "INSERT",new_row
-
     # TODO: should be a transaction
     
     @book_db.execute("INSERT INTO book (id, date, amount_cents, details, currency, receipt_url, tax_code, debit_account, credit_account, debit_txn_id, credit_txn_id, order_id, invoice_id, invoice_lines, invoice_payment_method, invoice_company, invoice_name, invoice_address_1, invoice_address_2, invoice_zip, invoice_city, invoice_state, invoice_country) 
@@ -349,7 +346,7 @@ SQL
       status = row[8]
       email = row[4]
       name = row[5]
-      details = "PP #{status} #{txn_type} #{email} #{name}"
+      #details = "PP #{status} #{txn_type} #{email} #{name}"
       
       new_booking = {
         :date => date,
@@ -477,7 +474,6 @@ SQL
   # TODO export CASH receipts
   
   def export_quarter
-
     quarters = {}
     
     rows = @book_db.execute <<-SQL
@@ -900,8 +896,6 @@ post PREFIX+'/documents' do
 
   cachebust_id = ""
 
-  pp params
-
   target_state = "unfiled"
   target_docid = ""
 
@@ -1055,6 +1049,15 @@ get PREFIX+'/invoices/new' do
       }
 end
 
+def company_details_for_date(date)
+  COMPANY_DETAILS.each do |det|
+    if date >= det[:since]
+      return det
+    end
+  end
+  nil
+end
+
 get PREFIX+'/invoices/:id' do
   book.reload_book
   
@@ -1102,12 +1105,14 @@ get PREFIX+'/invoices/:id' do
   elsif invoice[:invoice_payment_method].match(/cash/i)
     terms = "Die Rechnung wurde bereits bar beglichen."
   end
+
+  company = company_details_for_date(Date.parse(invoice[:date]))
   
   html = erb :invoice, :locals => {
                :invoice => invoice,
-               :sender_address_lines => COMPANY_ADDRESS.split("\n"),
-               :sender_bank_lines => COMPANY_BANK.split("\n"),
-               :sender_legal_lines => COMPANY_LEGAL.split("\n"),
+               :sender_address_lines => company[:address],
+               :sender_bank_lines => company[:bank],
+               :sender_legal_lines => company[:legal],
                :terms => terms,
                :outro => outro,
 	             :prefix => PREFIX
