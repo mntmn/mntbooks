@@ -346,7 +346,7 @@ SQL
       status = row[8]
       email = row[4]
       name = row[5]
-      #details = "PP #{status} #{txn_type} #{email} #{name}"
+      details = "PP #{status} #{txn_type} #{email} #{name}"
       
       new_booking = {
         :date => date,
