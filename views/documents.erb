@@ -67,11 +67,13 @@
           <p class="created">Scanned: <%= b[:created].strftime("%Y-%m-%d")  %></p>
           
           <div class="metadata">
-            <input type="text" name="doc-<%= b[:id] %>-docid" placeholder="Doc ID" value="<%= b[:metadata][:docid] %>">
-            <input type="text" name="doc-<%= b[:id] %>-date" placeholder="Date" value="<%= b[:metadata][:date] %>">
-            <input type="text" name="doc-<%= b[:id] %>-sum" placeholder="Sum" value="<%= b[:metadata][:sum] %>">
-            <input type="text" name="doc-<%= b[:id] %>-tags" placeholder="Tags" value="<%= b[:metadata][:tags] %>">
+            <input type="text" name="doc-<%= b[:id] %>-docid" id="doc-<%= b[:id] %>-docid" placeholder="Doc ID" value="<%= b[:metadata][:docid] %>">
+            <input type="text" name="doc-<%= b[:id] %>-date" id="doc-<%= b[:id] %>-date" placeholder="Date" value="<%= b[:metadata][:date] %>">
+            <input type="text" name="doc-<%= b[:id] %>-sum" id="doc-<%= b[:id] %>-sum" placeholder="Sum" value="<%= b[:metadata][:sum] %>">
+            <input type="text" name="doc-<%= b[:id] %>-tags" id="doc-<%= b[:id] %>-tags" placeholder="Tags" value="<%= b[:metadata][:tags] %>">
             <input type="submit" name="doc-<%= b[:id] %>-metadata" value="Save">
+            &nbsp;
+            <a onclick="autoFill('<%=b[:id]%>')">Autofill</a>
           </div>
 
           <div class="state">
@@ -89,7 +91,7 @@
             <input type="submit" name="doc-<%= b[:id] %>-rotate-270" value="-90°">
             <input type="submit" name="doc-<%= b[:id] %>-rotate-180" value="180°">
           </div>
-          <p class="text"><%= html_escape(b[:text]) %></p>
+          <p class="text" id="doc-<%= b[:id] %>-text"><%= html_escape(b[:text]) %></p>
         </form>
       </td>
     </tr>
@@ -102,6 +104,93 @@
         valueNames: [ 'title', 'created', 'state', 'text' ]
       }
       var docsList = new List('docs', options);
+    </script>
+    <script>
+      function normalizeDay(d) {
+        if ((d+"").length==1) return "0"+d
+        if ((d+"").length==2) return d+""
+        return "??"
+      }
+      function normalizeMonth(m) {
+        m=(m+"").toLowerCase()
+        var mnames = ["jan","feb","mär","apr","mai","jun","jul","aug","sep","okt","nov","dez",
+                      "jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"]
+        if (m.match(/\w/)) {
+          for (var i=0; i<mnames.length; i++) {
+            if (m.match(mnames[i])) {
+              m=(i%12)+1
+              break
+            }
+          }
+        }
+        if ((m+"").length==1) return "0"+m
+        if ((m+"").length==2) return m+""
+        return "??"
+      }
+      function normalizeYear(y) {
+        if ((y+"").length==2) return "20"+y
+        if ((y+"").length==4) return y+""
+        return "????"
+      }
+      
+      function autoFill(id) {
+        var text = document.getElementById("doc-"+id+"-text").innerText
+        text = text.replace("\n"," ")
+        text = text.replace("  "," ")
+
+        var matchers = [
+          {
+            name: "amazon business",
+            rxMatch: /Verkauft von Amazon EU/,
+            rxId: /Rechnungsnummer ([A-Z0-9\-]+)/,
+            rxDate: /Lieferdatum +(\d+) ([^ ]+) (\d+)/,
+            dateFmt: [2,1,0],
+            rxSum: /Zahlbetrag (\d+,\d+)/,
+            tags: "amazon"
+          },
+          {
+            name: "DHL Online Frankierung",
+            rxMatch: /DHL Online Frankierung/,
+            rxId: /Rechnungs-Nr.: ([A-Z0-9\-]+)/,
+            rxDate: /(\d+)\.(\d+)\.(\d+) Rechnungs/,
+            dateFmt: [2,1,0],
+            rxSum: /Rechnungsbetrag: (\d+,\d+)/,
+            tags: "dhl,post,postage"
+          }
+        ]
+        
+        for (var i=0; i<matchers.length; i++) {
+          var mt = matchers[i]
+          if (text.match(mt.rxMatch)) {
+            console.log("matched: ",mt.name,text)
+            var docid='',date='',sum=''
+            if ((m=text.match(mt.rxId))) {
+              docid=m[1]
+            }
+            if ((m=text.match(mt.rxDate))) {
+              var fmt = mt.dateFmt
+              date = [normalizeYear(m[fmt[0]+1]), normalizeMonth(m[fmt[1]+1]), normalizeDay(m[fmt[2]+1])].join("-")
+            }
+            if ((m=text.match(mt.rxSum))) {
+              if (m[1].match(/\.\d\d$/)) {
+                sum = m[1].replace(",","")
+              } else if (m[1].match(/\,\d\d$/)) {
+                sum = m[1].replace(".","").replace(",",".")
+              } else {
+                sum = "?.??"
+              }
+            }
+
+            console.log("match results:", docid,date,sum,mt.tags)
+            
+            document.getElementById("doc-"+id+"-docid").value = docid
+            document.getElementById("doc-"+id+"-date").value = date
+            document.getElementById("doc-"+id+"-sum").value = sum
+            document.getElementById("doc-"+id+"-tags").value = mt.tags
+            break
+          }
+        }
+      }
     </script>
   </body>
 </html>
