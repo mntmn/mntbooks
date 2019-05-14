@@ -84,11 +84,17 @@ statement.each do |row|
       # so skip these to avoid duplicates (with slightly different details)
 
       puts "~ skipping OOFF/RCUR entry"
+    elsif parsed_details.start_with?("SEPA-GUTSCHRIFT") && !parsed_details.include?("SVWZ+")
+      # these are duplicated, too (gutschrift with empty details)
+      puts "~ skipping SEPA-GUTSCHRIFT"
+    elsif parsed_details.start_with?(" SMS-Gebuehren fuer mobileTAN") || parsed_details.start_with?(" Aufwendungsersatz (Porto)") || parsed_details.start_with?("EU-D-AUFTR")
+      # these are duplicated, too (porto and sms-gebühren of deutsche bank)
+      puts "~ skipping duplicate bank fees"
     else
       id = Digest::MD5.hexdigest("#{row.data["date"]}#{amount_cents}#{parsed_details}")
       
       # transaction codes:
-      # 835 bank gebühren
+      # 835 bank gebühren or auslandszahlung
       # 116 manuelle überweisung
       # 105 abbuchung
       # 166 geld erhalten / einzahlung
