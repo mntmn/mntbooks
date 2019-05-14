@@ -65,7 +65,7 @@
         <form method="POST" action="documents?state=unfiled#doc<%= b[:id] %>">
           <p class="title"><a target="_blank" href="<%= prefix %>/pdf/<%= b[:title] %>"><%= b[:title] %></a></p>
           <p class="created">Scanned: <%= b[:created].strftime("%Y-%m-%d")  %> 
-            <button onclick="autoFill('<%=b[:id]%>')">Autofill</button>
+            <a href="#doc-<%= b[:id] %>" onclick="autoFill('<%=b[:id]%>')" style="text-decoration:underline">Autofill</a>
           </p>
           
           <div class="metadata">
