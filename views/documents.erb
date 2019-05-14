@@ -64,7 +64,9 @@
       <td>
         <form method="POST" action="documents?state=unfiled#doc<%= b[:id] %>">
           <p class="title"><a target="_blank" href="<%= prefix %>/pdf/<%= b[:title] %>"><%= b[:title] %></a></p>
-          <p class="created">Scanned: <%= b[:created].strftime("%Y-%m-%d")  %></p>
+          <p class="created">Scanned: <%= b[:created].strftime("%Y-%m-%d")  %> 
+            <button onclick="autoFill('<%=b[:id]%>')">Autofill</button>
+          </p>
           
           <div class="metadata">
             <input type="text" name="doc-<%= b[:id] %>-docid" id="doc-<%= b[:id] %>-docid" placeholder="Doc ID" value="<%= b[:metadata][:docid] %>">
@@ -72,8 +74,6 @@
             <input type="text" name="doc-<%= b[:id] %>-sum" id="doc-<%= b[:id] %>-sum" placeholder="Sum" value="<%= b[:metadata][:sum] %>">
             <input type="text" name="doc-<%= b[:id] %>-tags" id="doc-<%= b[:id] %>-tags" placeholder="Tags" value="<%= b[:metadata][:tags] %>">
             <input type="submit" name="doc-<%= b[:id] %>-metadata" value="Save">
-            &nbsp;
-            <a onclick="autoFill('<%=b[:id]%>')">Autofill</a>
           </div>
 
           <div class="state">
