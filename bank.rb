@@ -76,45 +76,54 @@ statement.each do |row|
     parsed_date = Date.new(2000+(row.data["date"][0..1].to_i), row.data["date"][2..3].to_i, row.data["date"][4..5].to_i)
     amount_cents = (row.data["amount"].gsub(",",".").to_f*100).to_i
     parsed_details = row.details.data["details"].gsub(/\?[0-9]?[0-9]?/," ")
-    id = Digest::MD5.hexdigest("#{row.data["date"]}#{amount_cents}#{parsed_details}")
     formatted_date = parsed_date.strftime("%Y-%m-%d 00:00:00.000")
 
-    # transaction codes:
-    # 835 bank gebühren
-    # 116 manuelle überweisung
-    # 105 abbuchung
-    # 166 geld erhalten / einzahlung
-    # storno_flag "R" == rückbuchung
+    if parsed_details.end_with?(" 992") || parsed_details.end_with?(" 991")
+      # for recurrent DD, we get a duplicate transaction with 992 marker
+      # for one time DD, we get a duplicate transaction with 991 marker
+      # so skip these to avoid duplicates (with slightly different details)
 
-    txc = row.details.data["transaction_code"].to_i
-    fc = row.data["funds_code"]
-    sf = row.data["storno_flag"]
-    
-    if (fc=="D" && sf!="R") || (fc=="C" && sf=="R")
-      # money was moved out of account
-      amount_cents = -amount_cents
-    end
-    
-    new_row = [
-      id,
-      formatted_date,
-      amount_cents,
-      parsed_details,
-      row.data["entry_date"],
-      row.data["storno_flag"],
-      row.data["funds_code"],
-      row.data["currency_letter"],
-      row.data["swift_code"],
-      row.data["reference"],
-      row.data["bank_reference"],
-      row.details.data["transaction_code"],
-      row.details.data["seperator"],
-      row.source
-    ]
+      puts "~ skipping OOFF/RCUR entry"
+    else
+      id = Digest::MD5.hexdigest("#{row.data["date"]}#{amount_cents}#{parsed_details}")
+      
+      # transaction codes:
+      # 835 bank gebühren
+      # 116 manuelle überweisung
+      # 105 abbuchung
+      # 166 geld erhalten / einzahlung
+      # storno_flag "R" == rückbuchung
 
-    pp new_row
-    
-    db.execute("REPLACE INTO transactions (id, date, amount_cents, details, entry_date, storno_flag, funds_code, currency_letter, swift_code, reference, bank_reference, transaction_code, seperator, source) 
+      txc = row.details.data["transaction_code"].to_i
+      fc = row.data["funds_code"]
+      sf = row.data["storno_flag"]
+      
+      if (fc=="D" && sf!="R") || (fc=="C" && sf=="R")
+        # money was moved out of account
+        amount_cents = -amount_cents
+      end
+      
+      new_row = [
+        id,
+        formatted_date,
+        amount_cents,
+        parsed_details,
+        row.data["entry_date"],
+        row.data["storno_flag"],
+        row.data["funds_code"],
+        row.data["currency_letter"],
+        row.data["swift_code"],
+        row.data["reference"],
+        row.data["bank_reference"],
+        row.details.data["transaction_code"],
+        row.details.data["seperator"],
+        row.source
+      ]
+
+      pp new_row
+      
+      db.execute("REPLACE INTO transactions (id, date, amount_cents, details, entry_date, storno_flag, funds_code, currency_letter, swift_code, reference, bank_reference, transaction_code, seperator, source) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", new_row)
+    end
   end
 end
