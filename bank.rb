@@ -54,8 +54,6 @@ if !db_exists
   create_account_db(db,acc_id)
 end
 
-# yyyy-mm-dd 00:00:00.SSS
-
 FinTS::Client.logger.level = Logger::DEBUG
 f = FinTS::PinTanClient.new(
     bank_code,
@@ -78,58 +76,44 @@ statement.each do |row|
     parsed_details = row.details.data["details"].gsub(/\?[0-9]?[0-9]?/," ")
     formatted_date = parsed_date.strftime("%Y-%m-%d 00:00:00.000")
 
-    if parsed_details.end_with?(" 992") || parsed_details.end_with?(" 991")
-      # for recurrent DD, we get a duplicate transaction with 992 marker
-      # for one time DD, we get a duplicate transaction with 991 marker
-      # so skip these to avoid duplicates (with slightly different details)
+    id = Digest::MD5.hexdigest("#{row.data["date"]}#{amount_cents}#{parsed_details}")
+    
+    # transaction codes:
+    # 835 bank gebühren or auslandszahlung
+    # 116 manuelle überweisung
+    # 105 abbuchung
+    # 166 geld erhalten / einzahlung
+    # storno_flag "R" == rückbuchung
 
-      puts "~ skipping OOFF/RCUR entry"
-    elsif parsed_details.start_with?("SEPA-GUTSCHRIFT") && !parsed_details.include?("SVWZ+")
-      # these are duplicated, too (gutschrift with empty details)
-      puts "~ skipping SEPA-GUTSCHRIFT"
-    elsif parsed_details.start_with?(" SMS-Gebuehren fuer mobileTAN") || parsed_details.start_with?(" Aufwendungsersatz (Porto)") || parsed_details.start_with?("EU-D-AUFTR")
-      # these are duplicated, too (porto and sms-gebühren of deutsche bank)
-      puts "~ skipping duplicate bank fees"
-    else
-      id = Digest::MD5.hexdigest("#{row.data["date"]}#{amount_cents}#{parsed_details}")
-      
-      # transaction codes:
-      # 835 bank gebühren or auslandszahlung
-      # 116 manuelle überweisung
-      # 105 abbuchung
-      # 166 geld erhalten / einzahlung
-      # storno_flag "R" == rückbuchung
-
-      txc = row.details.data["transaction_code"].to_i
-      fc = row.data["funds_code"]
-      sf = row.data["storno_flag"]
-      
-      if (fc=="D" && sf!="R") || (fc=="C" && sf=="R")
-        # money was moved out of account
-        amount_cents = -amount_cents
-      end
-      
-      new_row = [
-        id,
-        formatted_date,
-        amount_cents,
-        parsed_details,
-        row.data["entry_date"],
-        row.data["storno_flag"],
-        row.data["funds_code"],
-        row.data["currency_letter"],
-        row.data["swift_code"],
-        row.data["reference"],
-        row.data["bank_reference"],
-        row.details.data["transaction_code"],
-        row.details.data["seperator"],
-        row.source
-      ]
-
-      pp new_row
-      
-      db.execute("REPLACE INTO transactions (id, date, amount_cents, details, entry_date, storno_flag, funds_code, currency_letter, swift_code, reference, bank_reference, transaction_code, seperator, source) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", new_row)
+    txc = row.details.data["transaction_code"].to_i
+    fc = row.data["funds_code"]
+    sf = row.data["storno_flag"]
+    
+    if (fc=="D" && sf!="R") || (fc=="C" && sf=="R")
+      # money was moved out of account
+      amount_cents = -amount_cents
     end
+    
+    new_row = [
+      id,
+      formatted_date,
+      amount_cents,
+      parsed_details,
+      row.data["entry_date"],
+      row.data["storno_flag"],
+      row.data["funds_code"],
+      row.data["currency_letter"],
+      row.data["swift_code"],
+      row.data["reference"],
+      row.data["bank_reference"],
+      row.details.data["transaction_code"],
+      row.details.data["seperator"],
+      row.source
+    ]
+
+    pp new_row
+    
+    db.execute("REPLACE INTO transactions (id, date, amount_cents, details, entry_date, storno_flag, funds_code, currency_letter, swift_code, reference, bank_reference, transaction_code, seperator, source) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", new_row)
   end
 end
