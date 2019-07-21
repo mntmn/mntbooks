@@ -270,9 +270,12 @@ SQL
     #
     # TODO factor out into modules
     # TODO create some kind of rule system for this
-
+    #
+    # if a bank_reference is set, this is a "not-yet-booked" transaction for which
+    # a duplicate "real" transaction appears later
+    #
     @bank_rows = @bank_acc_db.execute <<-SQL
-      select id,date,amount_cents,details,transaction_code,"EUR" from transactions order by date desc;
+      select id,date,amount_cents,details,transaction_code,"EUR" from transactions where length(bank_reference)=0 order by date desc;
     SQL
 
     acc_key = "assets:bank-#{acc_id}"
