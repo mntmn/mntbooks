@@ -43,54 +43,86 @@
     .title {
         font-weight: bold;
     }
+
+    .sort.asc::before {
+        content: "▲";
+    }
+    .sort.desc::before {
+        content: "▼";
+    }
     
   </style>
   <div id="docs">
-    <div class="filter">
+    <div class="filter" style="display: none">
       <input class="search" type="search" placeholder="Filter">
       
-      <span class="sort" data-sort="title">Sort by title</span>
-      <span class="sort" data-sort="created">Sort by created</span>
-      <span class="sort" data-sort="state">Sort by state</span>
-      
-      <span>(<%= docs.size %> Docs)</span>
+      <button class="sort" data-sort="title">Sort by title</button>
+      <button class="sort" data-sort="created">Sort by created</button>
     </div>
-    
-    <table class="docs">
+
+    <div>
+      <form method="GET" action="documents">
+        <span><%= docs.size %> documents with state</span>
+        <select name="state" onchange="this.form.submit()">
+          <option value="unfiled" <%= state=="unfiled"?"selected":"" %>>Unfiled</option>
+          <option value="defer" <%= state=="defer"?"selected":"" %>>Ready for Booking</option>
+          <option value="todo" <%= state=="todo"?"selected":"" %>>TODO</option>
+          <option value="archive" <%= state=="archive"?"selected":"" %>>Archived</option>
+          <option value="booked" <%= state=="booked"?"selected":"" %>>Booked</option>
+          <option value="" <%= state==""?"selected":"" %>>Any</option>
+        </select>
+      </form>
+    </div>
+
+    <!-- list class for list.js -->
+    <table class="docs list">
     <% i=1 %>
     <% docs.each do |b| %>
     <tr class="doc" id="doc<%=b[:id] %>">
       <td><a target="_blank" href="<%= prefix %>/pdf/<%= b[:title] %>"><img src="<%= b[:thumbnail] %>"></a></td>
       <td>
-        <form method="POST" action="documents?state=unfiled#doc<%= b[:id] %>">
-          <p class="title"><a target="_blank" href="<%= prefix %>/pdf/<%= b[:title] %>"><%= b[:title] %></a></p>
+        <form method="POST" action="documents?state=<%= state %>#doc<%= b[:id] %>">
+          <h3 class="title"><a target="_blank" href="<%= prefix %>/pdf/<%= b[:title] %>"><%= b[:title] %></a></h3>
           <p class="created">Scanned: <%= b[:created].strftime("%Y-%m-%d")  %> 
             <a href="#doc-<%= b[:id] %>" onclick="autoFill('<%=b[:id]%>')" style="text-decoration:underline">Autofill</a>
           </p>
           
           <div class="metadata">
-            <input type="text" name="doc-<%= b[:id] %>-docid" id="doc-<%= b[:id] %>-docid" placeholder="Doc ID" value="<%= b[:metadata][:docid] %>">
-            <input type="text" name="doc-<%= b[:id] %>-date" id="doc-<%= b[:id] %>-date" placeholder="Date" value="<%= b[:metadata][:date] %>">
-            <input type="text" name="doc-<%= b[:id] %>-sum" id="doc-<%= b[:id] %>-sum" placeholder="Sum" value="<%= b[:metadata][:sum] %>">
-            <input type="text" name="doc-<%= b[:id] %>-tags" id="doc-<%= b[:id] %>-tags" placeholder="Tags" value="<%= b[:metadata][:tags] %>">
-            <input type="submit" name="doc-<%= b[:id] %>-metadata" value="Save">
+            
+            <div class="form-group">
+              <label class="form-label">IDs in the document</label>
+              
+              <input class="form-input" type="text" name="doc-<%= b[:id] %>-docid" id="doc-<%= b[:id] %>-docid" placeholder="XYZ1232-234,foo99,24562341" value="<%= b[:metadata][:docid] %>" pattern="[a-zA-Z\-0-9,]+" required>
+            
+              <label class="form-label">Main Date (Invoice Date etc.)</label>
+              <input type="text" name="doc-<%= b[:id] %>-date" id="doc-<%= b[:id] %>-date" placeholder="YYYY-MM-DD" value="<%= b[:metadata][:date] %>" style="width: 100px;" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}" required>
+              
+              <label class="form-label">Biggest Sum</label>
+              <input type="text" name="doc-<%= b[:id] %>-sum" id="doc-<%= b[:id] %>-sum" placeholder="12345.99" value="<%= b[:metadata][:sum] %>" style="width: 100px;" pattern="[0-9]+\.[0-9]{2}">
+
+              <label class="form-label">Tags</label>
+              <input type="text" name="doc-<%= b[:id] %>-tags" id="doc-<%= b[:id] %>-tags" placeholder="tag,tag,tag" value="<%= b[:metadata][:tags] %>" style="width: 150px;" pattern="[a-z0-9,]+">
+            </div>
+            
+            <div class="form-group state">
+              <label class="form-label">State</label>
+              <% if b[:state] == "booked" %>
+                Booked
+              <% else %>
+              <select name="doc-<%= b[:id] %>-state">
+                <option value="unfiled" <%= b[:state]=="unfiled"?"selected":"" %>>Unfiled</option>
+                <option value="defer" <%= b[:state]=="defer"?"selected":"" %>>Ready for Booking</option>
+                <option value="todo" <%= b[:state]=="todo"?"selected":"" %>>TODO</option>
+                <option value="archive" <%= b[:state]=="archive"?"selected":"" %>>Archived</option>
+              </select>
+              <% end %>
+            </div>
+            
+            <div class="form-group">
+              <input type="submit" name="doc-<%= b[:id] %>-metadata" value="Save">
+            </div>
           </div>
 
-          <div class="state">
-            State: <b><%= b[:state] %></b>
-            <span class="actions">
-              <input type="submit" name="doc-<%= b[:id] %>-state" value="TODO">
-              <input type="submit" name="doc-<%= b[:id] %>-state" value="Defer">
-              <input type="submit" name="doc-<%= b[:id] %>-state" value="Archive">
-            </span>
-          </div>
-          
-          <div class="actions">
-            Rotate:
-            <input type="submit" name="doc-<%= b[:id] %>-rotate-90" value="+90°">
-            <input type="submit" name="doc-<%= b[:id] %>-rotate-270" value="-90°">
-            <input type="submit" name="doc-<%= b[:id] %>-rotate-180" value="180°">
-          </div>
           <p class="text" id="doc-<%= b[:id] %>-text"><%= html_escape(b[:text]) %></p>
         </form>
       </td>
@@ -104,8 +136,7 @@
         valueNames: [ 'title', 'created', 'state', 'text' ]
       }
       var docsList = new List('docs', options);
-    </script>
-    <script>
+      
       function normalizeDay(d) {
         if ((d+"").length==1) return "0"+d
         if ((d+"").length==2) return d+""
@@ -193,5 +224,13 @@
         }
       }
     </script>
+
+    <% if notification %>
+    <script>
+      new Noty({
+          text: "<%= notification %>"
+      }).show()
+    </script>
+    <% end %>
   </body>
 </html>
