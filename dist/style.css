@@ -55,6 +55,10 @@ nav span {
     top: 19px;
 }
 
+tr {
+    vertical-align: top;
+}
+
 tr:nth-child(even) {
     background: #f8f8f8;
 }
@@ -72,5 +76,18 @@ table {
 tr.month-row td {
     padding-bottom: 40px;
     font-weight: bold;
+}
+
+.form-group {
+    margin-bottom: 1em;
+}
+
+.form-group input {
+    width: 300px;
+}
+
+label {
+    display: block;
+    margin-top: 1em;
 }
 

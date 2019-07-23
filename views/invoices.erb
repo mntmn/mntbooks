@@ -10,20 +10,20 @@
           <th>Date</th>
           <th>Cr</th>
           <th class="amount">Amt</th>
-          <th>Debit</th>
-          <th>Credit</th>
+          <th>Customer Acc</th>
+          <th>Sales Acc</th>
           <th class="details">Name</th>
           <th>Receipt</th>
         </tr>
         <% months.keys.each do |mk| %>
         <% months[mk][:invoices].each do |b| %>
         <tr>
-          <td class="date"><%= b[:date] %></td>
+          <td class="date"><%= b[:invoice_date] %></td>
           <td class="amount"><%= b[:currency] %></td>
           <td class="amount"><%= '%.2f' % (b[:amount_cents]/100.0) %></td>
-          <td><%= b[:debit_account] %></td>
-          <td><%= b[:credit_account] %></td>
-          <td class="details"><% if b[:invoice_company].size>0 %><%= b[:invoice_company] %><br><% end %><%= b[:invoice_name] %></td>
+          <td><%= b[:customer_account] %></td>
+          <td><%= b[:sales_account] %></td>
+          <td class="details"><% if b[:customer_company].size>0 %><%= b[:customer_company] %><br><% end %><%= b[:customer_name] %></td>
           <td>
             <% b[:payments].each do |p| %>
             <a href="<%= prefix %>/book#<%= p[:id] %>"><%= p[:amount_cents]<0 ? "⎌" : "💰" %> <%= p[:debit_account] %></a><br>

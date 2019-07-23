@@ -167,19 +167,19 @@
       </div>
       
       <div id="recipient-addr">
-        <% if invoice[:invoice_company].size>0 %><%= invoice[:invoice_company] %><% end %><br>
-        <%= invoice[:invoice_name] %><br>
-        <%= invoice[:invoice_address_1] %><br>
-        <%= invoice[:invoice_address_2] %><br>
-        <%= invoice[:invoice_zip] %>
-        <%= invoice[:invoice_city] %><br>
-        <%= invoice[:invoice_state] %>
-        <%= invoice[:invoice_country] %>
+        <% if invoice[:customer_company].size>0 %><%= invoice[:customer_company] %><% end %><br>
+        <%= invoice[:customer_name] %><br>
+        <%= invoice[:customer_address_1] %><br>
+        <%= invoice[:customer_address_2] %><br>
+        <%= invoice[:customer_zip] %>
+        <%= invoice[:customer_city] %><br>
+        <%= invoice[:customer_state] %>
+        <%= invoice[:customer_country] %>
       </div>
       
       <div id="meta">
-        <b>Rechnungsnummer: <%= invoice[:invoice_id] %></b><br>
-        Rechnungsdatum: <%= invoice[:date] %><br>
+        <b>Rechnungsnummer: <%= invoice[:id] %></b><br>
+        Rechnungsdatum: <%= invoice[:invoice_date] %><br>
         <% if (!invoice[:order_id].nil? && invoice[:order_id].size>0) %>Bestellnummer: <%= invoice[:order_id] %><% end %><br>
         <br>
         Leistungsdatum entspricht Rechnungsdatum
@@ -210,7 +210,7 @@
       <tfoot>
       </tfoot>
       <tbody>
-        <% i=0; invoice[:invoice_lines].each do |p| %>
+        <% i=0; invoice[:line_items].each do |p| %>
         <tr>
           <td class="pos"><%= i=i+1 %> </td>
           <td class="amount"><%= p["quantity"] %></td>
@@ -230,7 +230,7 @@
         </tr>
         <tr class="noborder">
           <td colspan="3"></td>
-          <td>USt (<%= invoice[:tax_rate] %>%<% if invoice[:invoice_vat_included] %> inkl.<% end %>)</td>
+          <td>USt (<%= invoice[:tax_rate] %>%<% if invoice[:vat_included] %> inkl.<% end %>)</td>
           <td class="sum"><%= invoice[:tax_total] %></td>
         </tr>
         <tr class="noborder sums-foot grand-total">

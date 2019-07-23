@@ -8,8 +8,8 @@
     <%= erb :menu, :locals => { :active => :new_invoice, :prefix => prefix } %>
     <header>
       <div id="recipient-addr" style="width:300px">
-        <input type="text" autofocus id="debit_account" class="account" placeholder="Debit Account" onblur="autoFillAddress()"><br>
-        <input type="text" id="credit_account" class="account" placeholder="Credit Account" value="sales" onchange="recalc()"><br>
+        <input type="text" autofocus id="debit_account" class="account" placeholder="Customer Account" onblur="autoFillAddress()"><br>
+        <input type="text" id="credit_account" class="account" placeholder="Sales Account" value="" onchange="recalc()"><br>
         <input type="text" id="name" placeholder="Name" onchange="recalc()"><br>
         <input type="text" id="company" placeholder="Company" onchange="recalc()"><br>
         <input type="text" id="addr1" placeholder="Address Line 1" onchange="recalc()"><br>
@@ -108,23 +108,23 @@
 
         bookRow = {
           iid: document.getElementById("iid").value,
-          date: document.getElementById("idate").value,
+          invoice_date: document.getElementById("idate").value,
           amount_cents: grandTotal*100,
           currency: "EUR",
-          debit_account: document.getElementById("debit_account").value,
-          credit_account: document.getElementById("credit_account").value,
-          invoice_payment_method: paymentMethod,
-          invoice_company: document.getElementById("company").value,
-          invoice_name: document.getElementById("name").value,
-          invoice_address_1: document.getElementById("addr1").value,
-          invoice_address_2: document.getElementById("addr2").value,
-          invoice_zip: document.getElementById("zip").value,
-          invoice_city: document.getElementById("city").value,
-          invoice_state: document.getElementById("state").value,
-          invoice_country: document.getElementById("country").value,
+          customer_account: document.getElementById("debit_account").value,
+          sales_account: document.getElementById("credit_account").value,
+          payment_method: paymentMethod,
+          customer_company: document.getElementById("company").value,
+          customer_name: document.getElementById("name").value,
+          customer_address_1: document.getElementById("addr1").value,
+          customer_address_2: document.getElementById("addr2").value,
+          customer_zip: document.getElementById("zip").value,
+          customer_city: document.getElementById("city").value,
+          customer_state: document.getElementById("state").value,
+          customer_country: document.getElementById("country").value,
           order_id: document.getElementById("ordernum").value,
-          invoice_lines: JSON.stringify(items),
-          invoice_incl_vat: !!inclVAT,
+          line_items: JSON.stringify(items),
+          vat_included: ""+!!inclVAT,
           tax_code: taxCode
         }
       }
@@ -157,7 +157,7 @@
             console.log(xhr.response)
             try {
               var obj = JSON.parse(xhr.response)
-              alert("Invoice Created: "+obj.invoice_id)
+              alert("Invoice Created: "+obj.id)
               location.href="<%= prefix %>/invoices"
             } catch (e) {
               alert("Sorry, an error occured: "+xhr.response)

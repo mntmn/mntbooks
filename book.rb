@@ -32,7 +32,8 @@ end
 
 class Book
   attr_accessor :acc_id, :bookings_for_debit_acc, :bookings_for_credit_acc, :book_rows, :bank_rows, :bookings_todo, :bookings_by_txn_id
-  attr_accessor :bookings_by_receipt_url, :bookings_by_invoice_id, :invoices_by_customer, :document_state_by_path
+  attr_accessor :bookings_by_receipt_url, :bookings_by_invoice_id, :document_state_by_path
+  attr_accessor :invoice_rows
   
   def initialize
     @acc_id = ENV["BANK_ACC"]
@@ -48,8 +49,9 @@ class Book
     @bank_rows = []
     @bookings_todo = []
     @bookings_by_txn_id = {}
-    @invoices_by_customer = {}
     @document_state_by_path = {}
+
+    @invoice_rows = []
     
     if File.file?(@db_filename)
       @db_exists = true
@@ -79,24 +81,36 @@ class Book
         debit_account varchar(32),
         credit_account varchar(32),
         debit_txn_id varchar(32),
-        credit_txn_id varchar(32),
-        order_id  varchar (32),
-        invoice_id  varchar (32),
-        invoice_payment_method  varchar (32),
-        invoice_company text,
-        invoice_lines text,
-        invoice_name  text,
-        invoice_address_1 text,
-        invoice_address_2 text,
-        invoice_zip text,
-        invoice_city  text,
-        invoice_state text,
-        invoice_country text,
-        invoice_vat_included int
+        credit_txn_id varchar(32)
       );
     SQL
 
-    # doctype can be: outoing_invoice, incoming_receipt, contract, note, ...
+    # TODO: unify txn_ids into one
+    
+    db.execute <<-SQL
+      create table invoices (
+        invoice_id varchar(64) not null primary key,
+        date varchar(23),
+        amount_cents int,
+        details text,
+        currency varchar(4),
+        tax_code varchar(8),
+        sales_account varchar(32),
+        order_id  varchar (32),
+        payment_method  varchar (32),
+        line_items text,
+        customer_account varchar(32),
+        customer_company text,
+        customer_name  text,
+        customer_address_1 text,
+        customer_address_2 text,
+        customer_zip text,
+        customer_city  text,
+        customer_state text,
+        customer_country text,
+        vat_included int
+      );
+    SQL
 
     db.execute <<-SQL
       create table documents (
@@ -110,28 +124,6 @@ class Book
         tags TEXT
       );
     SQL
-
-      # date: Date.parse(raw[0]),            x
-      # amount: parseFloat(raw[1]),          x
-      # currency: raw[2],                    x
-      # credit_account: parseInt(raw[3]), 
-      # debit_account: raw[4],
-      # payment_method: raw[5],              x
-      # company: raw[6],                     
-      # name: raw[7],
-      # addr1: raw[8],
-      # addr2: raw[9],
-      # zip: raw[10],
-      # city: raw[11],
-      # state: raw[12],
-      # country_iso2: raw[13],               x
-      # order_number: raw[14],
-      # items: raw[15].split("$"),           x
-      # incl_vat: inclVAT,                   x
-      # csv: rawCSV
-    
-
-    # credit_account empty if unpaid
     
     db.execute <<-SQL
       create index date_idx on book(date);
@@ -140,57 +132,31 @@ class Book
     puts "Book DB created."
   end
 
-  def create_booking(booking,auto_route)
-    new_row = ["",booking[:date],booking[:amount_cents],booking[:details],booking[:currency],booking[:receipt_url],booking[:tax_code],booking[:debit_account],booking[:credit_account],booking[:debit_txn_id],booking[:credit_txn_id],booking[:order_id],booking[:invoice_id],booking[:invoice_lines],booking[:invoice_payment_method],booking[:invoice_company],booking[:invoice_name],booking[:invoice_address_1],booking[:invoice_address_2],booking[:invoice_zip],booking[:invoice_city],booking[:invoice_state],booking[:invoice_country]]
+  def create_booking(booking)
 
-    customer_routing = false
-    orig_debit_acc = nil
-    orig_credit_acc = nil
-
-    # FIXME only if correct credit_account, i.e. paypal/bank
-    if auto_route && booking[:debit_account].match(/^customer:/)
-      # incoming -> assets:#{bank-acc}
-      # assets -> customer:...
-      orig_debit_acc = booking[:debit_account]
-      customer_routing = true
-      new_row[7] = "external"
-
-    #elsif booking[:credit_account].match(/^customer:/)
-    #  # FIXME: when? for refunds?
-    #  orig_credit_acc = booking[:credit_account]
-    #  customer_routing = true
-    #  booking[:credit_account] = "external"
-    end
+    # FIXME hash, no direct indexing!
     
+    new_row = ["",booking[:date],booking[:amount_cents],booking[:details],booking[:currency],booking[:receipt_url],booking[:tax_code],booking[:debit_account],booking[:credit_account],booking[:debit_txn_id],booking[:credit_txn_id]]
+
     id_raw = "#{new_row[1]}#{new_row[2]}#{new_row[7]}#{new_row[8]}#{new_row[9]}#{new_row[10]}"
     id = Digest::MD5.hexdigest(id_raw)
     new_row[0] = id
     
-    # TODO: should be a transaction
-    
     @book_db.execute("INSERT INTO book (id, date, amount_cents, details, currency, receipt_url, tax_code, debit_account, credit_account, debit_txn_id, credit_txn_id, order_id, invoice_id, invoice_lines, invoice_payment_method, invoice_company, invoice_name, invoice_address_1, invoice_address_2, invoice_zip, invoice_city, invoice_state, invoice_country) 
             VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?)", new_row)
 
-    if customer_routing
-      new_row[3]="Route \##{id} to #{orig_debit_acc}"
-      new_row[7]=new_row[8] # debit <- credit
-      new_row[8]=orig_debit_acc
-      
-      id_raw = "#{new_row[1]}#{new_row[2]}#{new_row[7]}#{new_row[8]}#{new_row[9]}#{new_row[10]}"
-      id = Digest::MD5.hexdigest(id_raw)
-      new_row[0] = id
-      
-      @book_db.execute("INSERT INTO book (id, date, amount_cents, details, currency, receipt_url, tax_code, debit_account, credit_account, debit_txn_id, credit_txn_id, order_id, invoice_id) 
-            VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?)", new_row[0..12])
-    end
+  end
+  
+  def create_invoice(invoice)
+    new_row = [invoice[:id],invoice[:invoice_date],invoice[:amount_cents],invoice[:details],invoice[:currency],invoice[:tax_code],invoice[:customer_account],invoice[:sales_account],invoice[:order_id],invoice[:line_items],invoice[:payment_method],invoice[:customer_company],invoice[:customer_name],invoice[:customer_address_1],invoice[:customer_address_2],invoice[:customer_zip],invoice[:customer_city],invoice[:customer_state],invoice[:customer_country],invoice[:vat_included]]
+    
+    @book_db.execute("INSERT INTO invoices (id, invoice_date, amount_cents, details, currency, tax_code, customer_account, sales_account, order_id, line_items, payment_method, customer_company, customer_name, customer_address_1, customer_address_2, customer_zip, customer_city, customer_state, customer_country, vat_included) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", new_row)
+
   end
 
   def link_receipt(id,receipt_url)
     @book_db.execute("update book set receipt_url = ? where id = ?", receipt_url, id)
-  end
-
-  def link_invoice_receipt(invoice_id,receipt_url)
-    @book_db.execute("update book set receipt_url=? where invoice_id=? and credit_account like 'sales%' limit 1", receipt_url, invoice_id)
   end
 
   def reload_book
@@ -204,6 +170,18 @@ class Book
     @documents = []
     @document_state_by_path = {}
     @document_by_path = {}
+
+    ### load all invoice rows into memory
+
+    @invoice_rows = @book_db.execute <<-SQL
+select * from invoices order by id desc;
+SQL
+    converted_invoice_rows = []
+    @invoice_rows.each do |row|
+      row = OpenStruct.new(row)
+      converted_invoice_rows.push(row)
+    end
+    @invoice_rows = converted_invoice_rows
 
     ##############################################################
     ### load all book rows into memory
@@ -244,20 +222,6 @@ SQL
       end
       if !invoice_id.nil? && invoice_id.size>0
         @bookings_by_invoice_id[invoice_id].push(row)
-      end
-      
-      # FIXME stringly matching
-      debit_account = row[:debit_account]
-      if !debit_account.nil? && debit_account.match(/^customer:/)
-        if !@invoices_by_customer[debit_account]
-          @invoices_by_customer[debit_account]=[]
-        end
-        @invoices_by_customer[debit_account].push({
-                                                 book_id: row[:id],
-                                                 receipt_url: receipt_urls.first, # FIXME
-                                                 amount_cents: row[:amount_cents],
-                                                 date: row[:date]
-                                               })
       end
     end
     @book_rows = converted_book_rows
@@ -389,6 +353,8 @@ SQL
             new_booking[:amount] = -amount # only positive amounts are transferred
             new_booking[:debit_account] = acc_key
             new_booking[:debit_txn_id] = id
+
+            bank_row[2] = -amount
             
             @bookings_todo.push(bank_row)
             @bookings_by_txn_id[id] = new_booking
@@ -413,7 +379,7 @@ SQL
     ### load all document rows into memory
     
     @doc_rows = @book_db.execute <<-SQL
-select path,state,docid,date,sum,tags from documents;
+select path,state,docid,date,sum,tags from documents order by date;
 SQL
 
     @doc_rows.each do |doc|
@@ -422,13 +388,10 @@ SQL
       @document_by_path[doc[:path]]=doc
       @documents.push(doc)
     end
-    @documents.sort_by! do |d|
-      d[:docid] || d[:path]
-    end
   end
 
-  def get_invoice_booking(id)
-    results = @book_db.execute("select * from book where debit_txn_id=?", id)
+  def get_invoice(id)
+    results = @book_db.execute("select * from invoices where id=?", id)
     OpenStruct.new(results.first)
   end
 
@@ -450,7 +413,7 @@ SQL
 
   def update_document_state(pdfname, state)
     if get_document_state(pdfname) == "unfiled"
-      @book_db.execute("insert into documents (path,state) values (?,?)",[pdfname, state])
+      @book_db.execute("replace into documents (path,state) values (?,?)",[pdfname, state])
     else
       @book_db.execute("update documents set state=? where path=?",[state, pdfname])
     end
@@ -459,9 +422,6 @@ SQL
   
   def update_document_metadata(pdfname, docid, date, sum, tags)
     puts "update metadata:",[docid,date,sum,tags,pdfname]
-    if get_document_state(pdfname) == "unfiled"
-      update_document_state(pdfname, "defer")
-    end
     @book_db.execute("update documents set docid=?,date=?,sum=?,tags=? where path=?",[docid,date,sum,tags,pdfname])
   end
 
@@ -572,103 +532,6 @@ SQL
 
     quarters.keys
   end
-
-  def import_outgoing_invoices()
-    # date,amount,currency,account1,account2,paymentMethod,company,name,addr1,addr2,zip,city,state,country,ordernum,items
-
-    reload_book
-    docs = fetch_all_documents(self)
-    
-    paths = Dir.glob(INVOICES_CSV_FOLDER+"/**.csv").sort
-    paths.each do |path|
-      iid = path.split("-").last.sub(".csv","").to_i
-      year = File.basename(path).split("-").first.to_i
-      
-      csv = CSV.new(File.read(path), {:headers=>true})
-      csv.each do |row|
-        # FIXME: manual and shop csv header names differ :/
-        # FIXME: invoice id is implict and only in the file name .______.
-
-        formatted_iid = "#{year}-#{iid.to_s.rjust(4,'0')}"
-        
-        payment_method = row[5]
-        items = row[15]
-
-        if row[6] && row[6].gsub(/[^a-zA-Z0-9]/,"").size>3
-          customer_id = row[6].gsub(/[^a-zA-Z0-9]/,"").downcase.gsub(/(gmbh|ug|gbr|inc)/,"")
-        else
-          customer_id = row[7].gsub(/[^a-zA-Z0-9]/,"").downcase
-        end
-
-        debit_acc = "customer:#{customer_id}"
-        
-        credit_acc = "sales:other"
-        # project heuristics
-        if items.match("Reform") then
-          credit_acc = "sales:reform"
-        elsif items.match("ZZ9000") then
-          credit_acc = "sales:zz9000"
-        elsif items.match("VA2000") then
-          credit_acc = "sales:va2000"
-        end
-
-        eu = ["AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "EL", "ES", "FI", "FR", "HR", "HU", "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK", "UK", "GB"]
-
-        tax_code = "NONEU0"
-        if eu.include?(row[13])
-          tax_code = "EU19"
-        end
-
-        # an invoice is:
-        # - a transaction from a customer subaccount to a sales subaccount
-        # - a document that can be rendered
-        # - receipt_url of transaction can point to the pdf renderer
-        
-        data = {
-          date: row[0].split(" ").first,
-          amount_cents: (row[1].to_f*100).to_i,
-          currency: row[2],
-          invoice_id: formatted_iid,
-          invoice_payment_method: row[5],
-          invoice_company: row[6],
-          invoice_name: row[7],
-          invoice_address_1: row[8],
-          invoice_address_2: row[9],
-          invoice_zip: row[10],
-          invoice_city: row[11],
-          invoice_state: row[12],
-          invoice_country: row[13],
-          order_id: row[14],
-          invoice_lines: row[15],
-          debit_account: debit_acc,
-          credit_account: credit_acc,
-          debit_txn_id: formatted_iid,
-          tax_code: tax_code,
-          details: "Invoice #{formatted_iid}",
-          receipt_url: "/invoices/#{formatted_iid}"
-        }
-
-        #docs.each do |d|
-        #  if d[:title].match(formatted_iid) then
-        #    data[:receipt_url] = d[:path].split("/").last
-        #  end
-        #end
-
-        iid+=1
-
-        booking = bookings_by_invoice_id[formatted_iid]
-        if booking
-          puts "  '-- existing booking: #{booking[0]}"
-        else
-          create_booking(data,false)
-          puts "  '-- new booking created"
-        end
-      end
-    end
-
-    "OK"
-  end
-
 end
 
 def clean_bank_row_description(raw_desc)
@@ -813,7 +676,7 @@ def fetch_all_documents(book)
     thumbpath = THUMB_FOLDER+"/"+thumbname
     textpath = THUMB_FOLDER+"/"+textname
 
-    puts "~~ PDF: #{path} ~~"
+    #puts "~~ PDF: #{path} ~~"
     
     # TODO: move this to the background / ocr cron
     
@@ -865,33 +728,37 @@ def fetch_all_documents(book)
   docs
 end
 
-get PREFIX+'/documents' do
+def validate_state(new_state)
+  if new_state.match(/^(todo|archive|defer|unfiled|booked)$/)
+    new_state
+  else
+    false
+  end
+end
+
+def render_document_list(book, params, notification)
   book.reload_book
   docs = fetch_all_documents(book)
 
   state = params["state"]
 
-  if params["state"]
+  if validate_state(params["state"])
     docs = docs.select do |d|
       d[:state] == params["state"]
-    end
-  end
-  
-  if params["cachebust"]
-    docs.each do |d|
-      d = OpenStruct.new(d)
-      if d[:id] == params["cachebust"]
-        d[:thumbnail]+="?v="+Random.new.rand.to_s
-        break
-      end
     end
   end
   
   erb :documents, :locals => {
         :docs => docs,
 	      :prefix => PREFIX,
-        :active => "docs_#{state}".to_sym
+        :active => "docs_#{state}".to_sym,
+        :state => state,
+        :notification => notification
       }
+end
+
+get PREFIX+'/documents' do
+  render_document_list(book, params, nil)
 end
 
 post PREFIX+'/documents' do
@@ -902,17 +769,17 @@ post PREFIX+'/documents' do
     Dir.mkdir("rotate-bak")
   end
 
-  cachebust_id = ""
-
-  target_state = "unfiled"
+  target_state = validate_state(params["state"])||"unfiled"
   target_docid = ""
+
+  notifications = []
 
   docs.each do |doc|
     doc = OpenStruct.new(doc)
     new_state = params["doc-#{doc[:id]}-state"]
     name = doc[:title]
     
-    if new_state && new_state.downcase.match(/^(todo|archive|defer)$/)
+    if new_state && validate_state(new_state)
       new_state.downcase!
       book.update_document_state(name, new_state)
     end
@@ -923,50 +790,19 @@ post PREFIX+'/documents' do
     new_sum =   params["doc-#{doc[:id]}-sum"]
 
     if params["doc-#{doc[:id]}-metadata"]
-      target_state=book.get_document_state(name)
       book.update_document_metadata(name,new_docid,new_date,new_sum,new_tags)
       target_docid=doc[:id]
-    end
 
-    rotate90 =  params["doc-#{doc[:id]}-rotate-90"]
-    rotate180 = params["doc-#{doc[:id]}-rotate-180"]
-    rotate270 = params["doc-#{doc[:id]}-rotate-270"]
-
-    backup_path = "rotate-bak/#{name}"
-
-    if rotate90 || rotate180 || rotate270
-      # backup original
-      cmd = "cp \"#{doc[:path]}\" \"#{backup_path}\""
-      puts "BACKUP|#{cmd}"
-      `#{cmd}`
-
-      # refresh thumbnail
-      thumbname = File.basename(doc[:title],".pdf")+".png"
-      thumbpath = THUMB_FOLDER+"/"+thumbname
-      `rm \"#{thumbpath}\"`
-    end
-    
-    if rotate90
-      cmd = "pdftk \"#{backup_path}\" cat 1-endeast output \"#{doc[:path]}\""
-      puts "ROTATE|#{cmd}"
-      `#{cmd}`
-    elsif rotate180
-      cmd = "pdftk \"#{backup_path}\" cat 1-endsouth output \"#{doc[:path]}\""
-      puts "ROTATE|#{cmd}"
-      `#{cmd}`
-    elsif rotate270
-      cmd = "pdftk \"#{backup_path}\" cat 1-endwest output \"#{doc[:path]}\""
-      puts "ROTATE|#{cmd}"
-      `#{cmd}`
-    end
-    
-    if rotate90 || rotate180 || rotate270
-      reload_docs = true
-      cachebust_id = doc[:id]
+      notifications.push("#{new_docid} saved to #{new_state}.")
     end
   end
+
+  notification = nil
+  if notifications.size > 0
+    notification = notifications.join(" ")
+  end
   
-  redirect PREFIX+"/documents?state=#{target_state}&cachebust=#{cachebust_id}#doc#{target_docid}"
+  render_document_list(book, params, notification)
 end
 
 get PREFIX+'/invoices' do
@@ -975,18 +811,14 @@ get PREFIX+'/invoices' do
 
   months={}
   
-  invoices=book.book_rows.select do |b|
-    !b[:invoice_id].nil? && b[:invoice_id].size>0
-  end
+  invoices=book.invoice_rows
   
   invoices=invoices.map do |i|
-    i[:receipt_urls] = make_receipt_urls(i[:receipt_url])
-    if !i.invoice_id.nil?
-      i[:receipt_urls].push(PREFIX+"/invoices/#{i.invoice_id}")
-      i[:receipt_urls].push(PREFIX+"/invoices/#{i.invoice_id}?pdf=1")
-    end
+    i[:receipt_urls] = []
+    i[:receipt_urls].push(PREFIX+"/invoices/#{i.id}")
+    i[:receipt_urls].push(PREFIX+"/invoices/#{i.id}?pdf=1")
 
-    date = Date.parse(i[:date])
+    date = Date.parse(i[:invoice_date])
     month_key = "#{date.year}-#{date.month}"
     if !months[month_key]
       months[month_key]={
@@ -997,23 +829,9 @@ get PREFIX+'/invoices' do
     months[month_key][:invoices].push(i)
     months[month_key][:sum_cents]+=i[:amount_cents]
 
-    # was the invoice paid? look for a matching crediting transaction
+    # FIXME was the invoice paid? look for a matching crediting transaction
     i[:paid] = false
     i[:payments] = []
-
-    credit_bookings = book.bookings_for_credit_acc[i[:debit_account]]
-    if (!credit_bookings.nil?)
-      if (credit_bookings.values.select {|b|
-            # FIXME messy model
-            if b[:receipt_url].to_s.include?(i[:invoice_id])
-              i[:payments].push(b)
-              true
-            end
-          }.size > 0)
-        i[:paid] = true
-      end
-    end
-    
     i
   end
     
@@ -1072,14 +890,14 @@ get PREFIX+'/invoices/:id' do
   # display/render an invoice
 
   iid=params["id"]
-  invoice = book.get_invoice_booking(iid)
+  invoice = book.get_invoice(iid)
 
-  if invoice[:invoice_lines][0] == '['
-    invoice[:invoice_lines] = JSON.parse(invoice[:invoice_lines])
+  if invoice[:line_items][0] == '['
+    invoice[:line_items] = JSON.parse(invoice[:line_items])
   else
     # FIXME move this to invoice importer
     ils = []
-    ils_raw = invoice[:invoice_lines].split("$")
+    ils_raw = invoice[:line_items].split("$")
     ils_raw.each do |il|
       il_raw = il.split("|")
       ils.push({
@@ -1091,7 +909,7 @@ get PREFIX+'/invoices/:id' do
         "sku" => ""
       })
     end
-    invoice[:invoice_lines] = ils
+    invoice[:line_items] = ils
   end
 
   total = invoice[:amount_cents]/100.0
@@ -1108,13 +926,13 @@ get PREFIX+'/invoices/:id' do
     outro = "Steuerfreie Ausfuhrlieferungen nach § 4 Nr. 1a UStG in Verbindung mit § 6 UStG."
   end
   terms = "Bitte begleichen Sie die Rechnung innerhalb von 7 Tagen ab Rechnungsdatum."
-  if invoice[:invoice_payment_method].match(/paypal/i)
+  if invoice[:payment_method].match(/paypal/i)
     terms = "Die Rechnung wurde bereits per PayPal beglichen."
-  elsif invoice[:invoice_payment_method].match(/cash/i)
+  elsif invoice[:payment_method].match(/cash/i)
     terms = "Die Rechnung wurde bereits bar beglichen."
   end
 
-  company = company_details_for_date(Date.parse(invoice[:date]))
+  company = company_details_for_date(Date.parse(invoice[:invoice_date]))
   
   html = erb :invoice, :locals => {
                :invoice => invoice,
@@ -1129,12 +947,8 @@ get PREFIX+'/invoices/:id' do
   if params["pdf"]
     content_type 'application/pdf'
     kit = PDFKit.new(html, :page_size => 'A4')
-    pdf_path = "#{DOC_FOLDER}/invoice-#{invoice[:invoice_id]}.pdf"
+    pdf_path = "#{DOC_FOLDER}/invoice-#{invoice[:id]}.pdf"
     file = kit.to_file(pdf_path)
-
-    # auto book this receipt
-    book.link_invoice_receipt(invoice[:invoice_id], "invoice-#{invoice[:invoice_id]}.pdf")
-    
     file
   else
     html
@@ -1149,58 +963,44 @@ post PREFIX+'/invoices' do
   # create a new invoice by posting JSON data
   # or update existing invoice depending on ID
   
-  # an invoice is:
-  # - a transaction from a customer subaccount to a sales subaccount
-  # - a document that can be rendered
-  # - receipt_url of transaction can point to the pdf renderer
-
   # TODO input validation
 
   request.body.rewind
   payload = JSON.parse(request.body.read)
 
+  # automatic invoice ID
+  # find all invoice ids from this year and increment by 1
   year = Date.today.year
   
-  invoices=book.book_rows.select do |b|
-    if !b[:invoice_id].nil?
-      b[:invoice_id].match(/^#{year}/)
+  invoices=book.invoice_rows.select do |b|
+    if !b[:id].nil?
+      b[:id].match(/^#{year}/)
     else
       false
     end
   end
-
   invoice_ids=invoices.map do |i|
-    i[:invoice_id].split("-").last.to_i
+    i[:id].split("-").last.to_i
   end
   invoice_ids.push(0)
-  
   iid = invoice_ids.sort.last+1
   formatted_iid = "#{year}-#{iid.to_s.rjust(4,'0')}"
 
+  # override automatic ID by given invoice ID
   if payload["iid"].to_s.size>4
-    # override invoice ID
     formatted_iid = payload["iid"]
   end
 
-  payload[:invoice_id] = formatted_iid
-  payload[:debit_txn_id] = formatted_iid
-  payload[:details] = "Invoice #{formatted_iid}"
-
-  #payload[:receipt_url] = "/invoices/#{formatted_iid}"
+  payload["id"] = formatted_iid
+  payload["details"] = "Invoice #{formatted_iid}"
+  payload["vat_included"] = payload["vat_included"].to_s
 
   payload = OpenStruct.new(payload)
   
-  book.create_booking(payload,false)
+  book.create_invoice(payload)
   
   pp payload
   payload.to_h.to_json
-end
-
-get PREFIX+'/import-invoices' do
-  content_type 'text/plain;charset=utf8'
-
-  invoices = book.import_outgoing_invoices()
-  invoices.to_s
 end
 
 get PREFIX+'/todo' do
@@ -1214,19 +1014,19 @@ get PREFIX+'/todo' do
   default_accounts = ["furniture","tools","consumables","packaging","computers","monitors","computers:input","computers:network","machines","parts:other","parts:reform","parts:va2000","parts:zz9000","sales:reform","sales:va2000","sales:zz9000","sales:services","sales:other","services:legal:taxadvisor","services:legal:notary","services:legal:ip","services:legal:lawyer","taxes:ust","taxes:gwst","taxes:kst","taxes:other","banking","shares","services:design","services:other","shipping","literature","capital-reserve"]
   
   accounts = (debit_accounts+credit_accounts+default_accounts).sort.uniq
-  documents = book.get_all_documents.map(&:to_h)
-  
-  invoices=book.book_rows.select do |b|
-    !b[:invoice_id].nil? && b[:invoice_id].size>0
+  documents = book.get_all_documents.map(&:to_h).select do |d|
+    d[:state]!="archive"
   end
+  
+  invoices = book.invoice_rows
 
   # FIXME: kludge
   invoices=invoices.map do |i|
     {
-      :path => "/invoices/#{i[:invoice_id]}",
-      :docid => "#{i[:invoice_id]}",
+      :path => "/invoices/#{i[:id]}",
+      :docid => "#{i[:id]}",
       :sum => i[:amount_cents]/100,
-      :tags => "invoice,#{i[:debit_account]}"
+      :tags => "invoice,#{i[:customer_account]}"
     }
   end
   
@@ -1259,10 +1059,11 @@ get PREFIX+'/book' do
     end
     months[month_key][:bookings].push(b)
 
+    # pseudo summing
     if b[:currency]=="EUR" # FIXME kludge
       if b[:debit_account].to_s.match("assets:") && !b[:credit_account].to_s.match("assets:")
         months[month_key][:sum_cents]-=b[:amount_cents]
-      elsif !b[:debit_account].to_s.match("assets:") && (b[:credit_account].to_s.match("assets:") || b[:credit_account].to_s.match("sales:"))
+      elsif !b[:debit_account].to_s.match("assets:") && (b[:credit_account].to_s.match("assets:"))
         months[month_key][:sum_cents]+=b[:amount_cents]
       end
     end
@@ -1359,7 +1160,7 @@ post PREFIX+'/todo' do
             end
             pp "New booking: ",new_booking
             
-            book.create_booking(new_booking,true)
+            book.create_booking(new_booking)
           else
             puts "ERROR: no booking available for txn #{id}"
           end
