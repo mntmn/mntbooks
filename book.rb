@@ -152,7 +152,6 @@ class Book
     
     @book_db.execute("INSERT INTO invoices (id, invoice_date, amount_cents, details, currency, tax_code, customer_account, sales_account, order_id, line_items, payment_method, customer_company, customer_name, customer_address_1, customer_address_2, customer_zip, customer_city, customer_state, customer_country, vat_included) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", new_row)
-
   end
 
   def link_receipt(id,receipt_url)
@@ -646,21 +645,8 @@ def book_row_to_hash(b)
   }
 end
 
+# FIXME why here?
 book = Book.new
-
-# for each pdf:
-# - check if in book table
-#
-# can i use /docs for this?
-# add a filter to docs: unfiled
-#
-#
-#- if unfiled, buttons:
-#  - "unpaid invoice"
-#  - "rotate 90"
-#  - "rotate 270"
-#  - "trash"
-#  - "archive"
 
 # actually move this to book class
 
@@ -884,17 +870,18 @@ def company_details_for_date(date)
   nil
 end
 
-get PREFIX+'/invoices/:id' do
-  book.reload_book
-  
-  # display/render an invoice
+def create_invoice_pdf(html, invoice)
+  kit = PDFKit.new(html, :page_size => 'A4')
+  pdf_path = "#{DOC_FOLDER}/invoice-#{invoice[:order_id]}-#{invoice[:id]}.pdf"
+  file = kit.to_file(pdf_path)
+  file
+end
 
-  iid=params["id"]
-  invoice = book.get_invoice(iid)
-
+def render_invoice_html(invoice)
   if invoice[:line_items][0] == '['
     invoice[:line_items] = JSON.parse(invoice[:line_items])
   else
+    # legacy format
     # FIXME move this to invoice importer
     ils = []
     ils_raw = invoice[:line_items].split("$")
@@ -944,12 +931,20 @@ get PREFIX+'/invoices/:id' do
 	             :prefix => PREFIX
              }
 
+  html
+end
+
+get PREFIX+'/invoices/:id' do
+  # display/render an invoice
+
+  invoice_id = params["id"]
+  book.reload_book
+  invoice = book.get_invoice(invoice_id)
+  html = render_invoice_html(invoice)
+  
   if params["pdf"]
     content_type 'application/pdf'
-    kit = PDFKit.new(html, :page_size => 'A4')
-    pdf_path = "#{DOC_FOLDER}/invoice-#{invoice[:id]}.pdf"
-    file = kit.to_file(pdf_path)
-    file
+    create_invoice_pdf(html, invoice)
   else
     html
   end
@@ -957,14 +952,13 @@ get PREFIX+'/invoices/:id' do
 end
 
 post PREFIX+'/invoices' do
+  # create a new invoice by posting JSON data
+  # or update existing invoice depending on ID
+  # TODO input validation
+
   content_type 'application/json'
   book.reload_book
   
-  # create a new invoice by posting JSON data
-  # or update existing invoice depending on ID
-  
-  # TODO input validation
-
   request.body.rewind
   payload = JSON.parse(request.body.read)
 
@@ -998,8 +992,13 @@ post PREFIX+'/invoices' do
   payload = OpenStruct.new(payload)
   
   book.create_invoice(payload)
+
+  # create PDF invoice
+  book.reload_book
+  invoice = book.get_invoice(formatted_iid)
+  html = render_invoice_html(invoice)
+  create_invoice_pdf(html, invoice)
   
-  pp payload
   payload.to_h.to_json
 end
 
