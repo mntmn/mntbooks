@@ -8,4 +8,5 @@ gem "pp"
 gem "ruby_fints"
 gem "paypal_nvp"
 gem "pdfkit"
+gem "sinatra-namespace"
 
