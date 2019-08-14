@@ -311,12 +311,15 @@ class MNTBooks < Sinatra::Base
 
     get '/todo' do
       book.reload_book
-      
-      rows = book.bookings_todo.map(&method(:bank_row_to_hash))
 
+      # collect all bank, paypal etc transactions that
+      # have no booking associated with them
+      rows = book.bookings_todo.map(&method(:bank_row_to_hash))
+      
       debit_accounts = book.debit_accounts
       credit_accounts = book.credit_accounts
       
+      # FIXME: move to config
       default_accounts = ["furniture","tools","consumables","packaging","computers","monitors","computers:input","computers:network","machines","parts:other","parts:reform","parts:va2000","parts:zz9000","sales:reform","sales:va2000","sales:zz9000","sales:services","sales:other","services:legal:taxadvisor","services:legal:notary","services:legal:ip","services:legal:lawyer","taxes:ust","taxes:gwst","taxes:kst","taxes:other","banking","shares","services:design","services:other","shipping","literature","capital-reserve"]
       
       accounts = (debit_accounts+credit_accounts+default_accounts).sort.uniq
@@ -451,26 +454,36 @@ class MNTBooks < Sinatra::Base
         if (id=k.match(/booking-([^\-]+)-receipt/))
           if v && v!="" && v!="null"
             id=id[1]
-            
-            account = params["booking-#{id}-account"]
-            if account && account!="" && account!="null"
-              puts "Link #{v} -> #{id}"
 
-              new_booking = book.bookings_by_txn_id[id]
-              if !new_booking.nil?
-                new_booking[:receipt_url] = v
+            # empty string account is OK
+            account = params["booking-#{id}-account"]
+            if !account
+              account = ""
+            end
+
+            receipt_url = v
+            if !receipt_url
+              receipt_url = ""
+            end
+
+            new_booking = book.bookings_by_txn_id[id]
+            if !new_booking.nil?
+              # either account or receipt_url has to be set
+              if account!="" || receipt_url!=""
+                new_booking[:receipt_url] = receipt_url
+                
                 if (new_booking[:debit_account]) then
                   new_booking[:credit_account] = account
                 else
                   new_booking[:debit_account] = account
                 end
-                pp "New booking: ",new_booking
-                
+
                 book.create_booking(new_booking)
-              else
-                puts "ERROR: no booking available for txn #{id}"
               end
+            else
+              puts "ERROR: no booking available for txn #{id}"
             end
+            
           end
         end
       end
