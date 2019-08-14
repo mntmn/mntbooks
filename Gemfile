@@ -9,4 +9,5 @@ gem "ruby_fints"
 gem "paypal_nvp"
 gem "pdfkit"
 gem "sinatra-namespace"
+gem "zip"
 
