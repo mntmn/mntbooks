@@ -15,6 +15,10 @@ PDFKit.configure do |config|
   config.wkhtmltopdf = "#{Dir.pwd}/wkhtmltopdf.sh"
 end
 
+def current_iso_date_time
+  Time.now.strftime('%Y-%m-%dT%H:%M:%S.%L%z')
+end
+
 class Book
   attr_accessor :acc_id, :bookings_for_debit_acc, :bookings_for_credit_acc, :book_rows, :bank_rows, :bookings_todo, :bookings_by_txn_id
   attr_accessor :bookings_by_receipt_url, :bookings_by_invoice_id, :document_state_by_path
@@ -70,7 +74,7 @@ class Book
     db.execute <<-SQL
       create table book (
         id varchar(32) not null primary key,
-        date varchar(23),
+        date varchar(32),
         amount_cents int,
         details text,
         currency varchar(4),
@@ -79,7 +83,9 @@ class Book
         debit_account varchar(32),
         credit_account varchar(32),
         debit_txn_id varchar(32),
-        credit_txn_id varchar(32)
+        credit_txn_id varchar(32),
+        created_at varchar(32),
+        updated_at varchar(32)
       );
     SQL
 
@@ -106,7 +112,9 @@ class Book
         customer_city  text,
         customer_state text,
         customer_country text,
-        vat_included int
+        vat_included int,
+        created_at varchar(32),
+        updated_at varchar(32)
       );
     SQL
 
@@ -116,10 +124,10 @@ class Book
         state varchar(32) not null,
         docid varchar(32),
         date varchar(23),
-
         sum varchar(32),
-        
-        tags TEXT
+        tags TEXT,
+        created_at varchar(32),
+        updated_at varchar(32)
       );
     SQL
     
@@ -134,14 +142,14 @@ class Book
 
     # FIXME hash, no direct indexing!
     
-    new_row = ["",booking[:date],booking[:amount_cents],booking[:details],booking[:currency],booking[:receipt_url],booking[:tax_code],booking[:debit_account],booking[:credit_account],booking[:debit_txn_id],booking[:credit_txn_id]]
+    new_row = ["",booking[:date],booking[:amount_cents],booking[:details],booking[:currency],booking[:receipt_url],booking[:tax_code],booking[:debit_account],booking[:credit_account],booking[:debit_txn_id],booking[:credit_txn_id],current_iso_date_time,current_iso_date_time]
 
-    id_raw = "#{new_row[1]}#{new_row[2]}#{new_row[7]}#{new_row[8]}#{new_row[9]}#{new_row[10]}"
+    id_raw = "#{booking[:date]}#{booking[:amount_cents]}#{booking[:debit_account]}#{booking[:credit_account]}#{booking[:debit_txn_id]}#{booking[:credit_txn_id]}"
     id = Digest::MD5.hexdigest(id_raw)
     new_row[0] = id
     
-    @book_db.execute("insert into book (id, date, amount_cents, details, currency, receipt_url, tax_code, debit_account, credit_account, debit_txn_id, credit_txn_id, order_id, invoice_id, invoice_lines, invoice_payment_method, invoice_company, invoice_name, invoice_address_1, invoice_address_2, invoice_zip, invoice_city, invoice_state, invoice_country) 
-            values (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?)", new_row)
+    @book_db.execute("insert into book (id, date, amount_cents, details, currency, receipt_url, tax_code, debit_account, credit_account, debit_txn_id, credit_txn_id, order_id, created_at, updated_at) 
+            values (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?)", new_row)
 
   end
   
