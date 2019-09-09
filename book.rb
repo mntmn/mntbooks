@@ -623,7 +623,13 @@ SQL
       if File.exist?(textpath) then
         text = File.read(textpath)
       else
+        `touch \"#{textpath}\"`
         text = "Text not available (password protected PDF?)"
+      end
+      
+      if !File.exist?(thumbpath) then
+        `touch \"#{thumbpath}\"`
+        text = "Thumbnail not available (password protected PDF?)"
       end
 
       state = "unfiled"
