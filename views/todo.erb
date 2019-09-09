@@ -64,9 +64,6 @@ var sourceFunc = function(term, suggest) {
 
 var sourceFuncReceipt = function(term, suggest) {
   term = term.toLowerCase()
-  //var myId = this.selector
-  //var accElId = "acc-"+myId.split("-")[1]
-  //var choices = invoices[document.getElementById(accElId).value]
   var choices = <%= documents.to_json %>
   var matches = []
 
@@ -74,6 +71,7 @@ var sourceFuncReceipt = function(term, suggest) {
   for (i=0; i<choices.length; i++) {
     if ((choices[i].docid && ~(choices[i].docid+"").toLowerCase().indexOf(term))
         || (choices[i].tags && ~(choices[i].tags+"").toLowerCase().indexOf(term))
+        || (choices[i].date && ~(choices[i].date+"").toLowerCase().indexOf(term))
         || (choices[i].sum && ~(choices[i].sum+"").indexOf(term))) {
       matches.push(choices[i])
     }
@@ -82,7 +80,7 @@ var sourceFuncReceipt = function(term, suggest) {
 }
 
 var renderFuncReceipt = function (item, search){
-  var display = item.docid+" | "+item.sum+" | "+item.tags+(item.state?(" | "+item.state):"");
+  var display = item.docid+" | "+item.sum+" | "+item.date+" | "+item.tags+(item.state?(" | "+item.state):"");
   search = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
   var re = new RegExp("(" + search.split(' ').join('|') + ")", "gi");
   return '<div class="autocomplete-suggestion" data-val="' + item.path + '">' + display.replace(re, "<b>$1</b>") + '</div>';
