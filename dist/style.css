@@ -26,6 +26,10 @@ input.receipt {
     width: 500px;
 }
 
+input.comment {
+    width: 400px;
+}
+
 input.account {
     width: 300px;
 }

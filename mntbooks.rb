@@ -69,6 +69,7 @@ class MNTBooks < Sinatra::Base
       :details => desc[:details],
       :details_line_1 => desc[:details_line_1]||desc[:details],
       :details_line_2 => desc[:details_line_2],
+      :comment => b[:comment],
       :receipt_urls => receipt_urls,
       :css_class => klass
     }
@@ -477,6 +478,8 @@ class MNTBooks < Sinatra::Base
                 else
                   new_booking[:debit_account] = account
                 end
+
+                new_booking[:comment] = params["booking-#{id}-comment"] || ""
 
                 book.create_booking(new_booking)
               end

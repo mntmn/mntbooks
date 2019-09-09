@@ -7,14 +7,15 @@
     <%= erb :menu, :locals => { :active => :todo, :prefix => prefix } %>
     <form action="todo" method="POST">
       <table>
-	<tr>
+	      <tr>
           <th>Date</th>
           <th>Cr</th>
           <th>Amt</th>
           <th>Details</th>
           <th>Account</th>
           <th>Receipt</th>
-	</tr>
+          <th>Comment</th>
+	      </tr>
         <% bookings.each do |b| %>
         <tr>
           <td class="date"><%= b[:date] %></td>
@@ -34,9 +35,13 @@
           <td>
             <label><input placeholder="Receipt" id="rcpt-<%= b[:id] %>" type="text" name="booking-<%= b[:id] %>-receipt" class="receipt"></label>
           </td>
+          <td>
+            <label><input placeholder="Comment" id="comment-<%= b[:id] %>" type="text" name="booking-<%= b[:id] %>-comment" class="comment"></label>
+          </td>
         </tr>
         <% end %>
         <tr>
+          <td></td>
           <td></td>
           <td></td>
           <td></td>

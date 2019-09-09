@@ -77,6 +77,7 @@ class Book
         date varchar(32),
         amount_cents int,
         details text,
+        comment text,
         currency varchar(4),
         receipt_url text,
         tax_code varchar(8),
@@ -142,14 +143,14 @@ class Book
 
     # FIXME hash, no direct indexing!
     
-    new_row = ["",booking[:date],booking[:amount_cents],booking[:details],booking[:currency],booking[:receipt_url],booking[:tax_code],booking[:debit_account],booking[:credit_account],booking[:debit_txn_id],booking[:credit_txn_id],current_iso_date_time,current_iso_date_time]
+    new_row = ["",booking[:date],booking[:amount_cents],booking[:details],booking[:currency],booking[:receipt_url],booking[:tax_code],booking[:debit_account],booking[:credit_account],booking[:debit_txn_id],booking[:credit_txn_id],booking[:order_id],current_iso_date_time,current_iso_date_time,booking[:comment]]
 
     id_raw = "#{booking[:date]}#{booking[:amount_cents]}#{booking[:debit_account]}#{booking[:credit_account]}#{booking[:debit_txn_id]}#{booking[:credit_txn_id]}"
     id = Digest::MD5.hexdigest(id_raw)
     new_row[0] = id
     
-    @book_db.execute("insert into book (id, date, amount_cents, details, currency, receipt_url, tax_code, debit_account, credit_account, debit_txn_id, credit_txn_id, order_id, created_at, updated_at) 
-            values (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?)", new_row)
+    @book_db.execute("insert into book (id, date, amount_cents, details, currency, receipt_url, tax_code, debit_account, credit_account, debit_txn_id, credit_txn_id, order_id, created_at, updated_at, comment) 
+            values (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)", new_row)
 
   end
   
