@@ -21,7 +21,7 @@ create table invoices (
         customer_city  text,
         customer_state text,
         customer_country text,
-        vat_included int
+        vat_included varchar(6)
       );
 
 insert into invoices 
