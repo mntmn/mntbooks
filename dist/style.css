@@ -3,7 +3,10 @@
 * { font-family: "Inter", "Inter UI", "Helvetica Neue", sans-serif; }
 .amount { text-align: right; }
 .credit-bank .amount { font-weight: bold; }
-.amount.positive { font-weight: bold; }
+.amount.positive {
+    font-weight: bold;
+    background-color: lightgreen;
+}
 .date { white-space: nowrap; }
 body {
     margin: 30px;
