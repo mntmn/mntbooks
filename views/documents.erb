@@ -174,7 +174,7 @@
             name: "amazon business",
             rxMatch: /www\.amazon\.de\/contact/,
             rxId: /Rechnungsnummer ([A-Z0-9\-]+)/,
-            rxDate: /Lieferdatum +(\d+) ([^ ]+) (\d+)/,
+            rxDate: /Lieferdatum +(\d+) ([^ ]+), (\d+)/,
             dateFmt: [2,1,0],
             rxSum: /Zahlbetrag (\d+,\d+)/,
             tags: "amazon"
@@ -187,6 +187,15 @@
             dateFmt: [2,1,0],
             rxSum: /Rechnungsbetrag: (\d+,\d+)/,
             tags: "dhl,post,postage"
+          },
+          {
+            name: "Telekom",
+            rxMatch: /Telekom Deutschland/,
+            rxId: /Rechnungsnummer ([0-9 ]+)/,
+            rxDate: /Datum (\d+)\.(\d+)\.(\d+)/,
+            dateFmt: [2,1,0],
+            rxSum: /Rechnungsbetrag (\d+,\d+)/,
+            tags: "telekom,internet,phone"
           }
         ]
         
