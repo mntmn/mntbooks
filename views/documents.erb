@@ -205,7 +205,7 @@
             console.log("matched: ",mt.name,text)
             var docid='',date='',sum=''
             if ((m=text.match(mt.rxId))) {
-              docid=m[1]
+              docid=m[1].replace(" ","")
             }
             if ((m=text.match(mt.rxDate))) {
               var fmt = mt.dateFmt
