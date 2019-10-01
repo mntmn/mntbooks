@@ -39,7 +39,7 @@ class MNTBooks < Sinatra::Base
       receipt_urls_raw = raw_receipt_url.split(",")
       receipt_urls_raw.each do |r|
         if r=="none"
-          r=""
+          r = "none"
         elsif r[0]!="/"
           r = "#{PREFIX}/pdf/#{r}"
         end
@@ -325,7 +325,7 @@ class MNTBooks < Sinatra::Base
       
       accounts = (debit_accounts+credit_accounts+default_accounts).sort.uniq
       documents = book.get_all_documents.map(&:to_h).select do |d|
-        d[:state]!="archive"
+        d[:state]=="defer"
       end
       
       invoices = book.invoice_rows
@@ -339,12 +339,18 @@ class MNTBooks < Sinatra::Base
           :tags => "invoice,#{i[:customer_account]}"
         }
       end
+
+      default_comment = current_iso_date_time
+      if request.env["REMOTE_USER"] && request.env["REMOTE_USER"].size>0
+        default_comment = "#{current_iso_date_time} #{request.env['REMOTE_USER']}"
+      end
       
       erb :todo, :locals => {
             :bookings => rows,
             :documents => [documents,invoices].flatten,
             :accounts => accounts,
-	          :prefix => PREFIX
+	          :prefix => PREFIX,
+            :default_comment => default_comment
           }
     end
 

@@ -98,3 +98,42 @@ label {
     margin-top: 1em;
 }
 
+.autocomplete-suggestions {
+    width: 800px !important;
+    
+    /*left: 20% !important;*/
+}
+
+.autocomplete-suggestion {
+    white-space: normal !important;
+    padding: 0.3em 0.6em !important;
+}
+
+.autocomplete-suggestion > span.sm {
+    width: 120px;
+    display: inline-block;
+}
+
+.autocomplete-suggestion > span.smr {
+    width: 120px;
+    display: inline-block;
+    text-align: right;
+}
+
+.autocomplete-suggestion img {
+    width: 128px;
+}
+
+a.btn {
+    cursor: pointer;
+    text-decoration: none;
+}
+
+table table {
+    width: 100%;
+    margin-bottom: .6em;
+}
+
+input.receipt {
+    margin-bottom: 1em;
+}

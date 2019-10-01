@@ -26,9 +26,11 @@
           <td><%= b[:credit_account] %></td>
           <td class="details"><%= b[:details_line_1] %><br><%= b[:details_line_2] %></td>
           <td>
+            <ul>
             <% b[:receipt_urls].each do |r| %>
-              <a href="<%= r %>"><%= r %></a>
+            <li><a href="<%= r %>"><%= r.gsub("/pdf/","") %></a></li>
             <% end %>
+            </ul>
           </td>
           <td>
             <input type="text" value="<%= b[:comment] %>">
