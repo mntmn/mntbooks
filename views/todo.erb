@@ -81,7 +81,7 @@
           var docs = src.value.split(",")
           var html = "<table>"
           for (var i=0; i<docs.length; i++) {
-            html += "<tr><td><a target='_blank' href='/pdf/"+docs[i]+"'>"+docs[i]+"</a></td>"
+            html += "<tr><td><a target='_blank' href='pdf/"+docs[i]+"'>"+docs[i]+"</a></td>"
             html += "<td><a class='btn' onclick=\"deleteReceiptLink('"+id+"',"+i+")\">🗑</a></td></tr>"
           }
           html += "</table>"
