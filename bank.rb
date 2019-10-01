@@ -72,7 +72,7 @@ statement.each do |row|
 
   if row.data && row.data["date"]
     parsed_date = Date.new(2000+(row.data["date"][0..1].to_i), row.data["date"][2..3].to_i, row.data["date"][4..5].to_i)
-    amount_cents = (row.data["amount"].gsub(",",".").to_f*100).to_i
+    amount_cents = row.data["amount"].gsub(",","").to_i
     parsed_details = row.details.data["details"].gsub(/\?[0-9]?[0-9]?/," ")
     formatted_date = parsed_date.strftime("%Y-%m-%d 00:00:00.000")
 
