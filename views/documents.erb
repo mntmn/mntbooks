@@ -174,7 +174,7 @@
             name: "amazon business",
             rxMatch: /www\.amazon\.de\/contact/,
             rxId: /Rechnungsnummer ([A-Z0-9\-]+)/,
-            rxDate: /Lieferdatum +(\d+) ([^ ]+), (\d+)/,
+            rxDate: /Lieferdatum +(\d+) ([^ ]+) (\d+)/,
             dateFmt: [2,1,0],
             rxSum: /Zahlbetrag (\d+,\d+)/,
             tags: "amazon"
@@ -187,6 +187,24 @@
             dateFmt: [2,1,0],
             rxSum: /Rechnungsbetrag: (\d+,\d+)/,
             tags: "dhl,post,postage"
+          },
+          {
+            name: "DHL Paket",
+            rxMatch: /DHL Paket GmbH/,
+            rxId: /Gläubiger-ID: ([0-9]+)/,
+            rxDate: /Gläubiger-ID: [0-9]+ (\d+)\.(\d+)\.(\d+)/,
+            dateFmt: [2,1,0],
+            rxSum: /Rechnungsbetrag \(inklusive Umsatzsteuer\) (\d+,\d+)/,
+            tags: "dhl,shipping"
+          },
+          {
+            name: "Deutsche Post Paket",
+            rxMatch: /Niederlassung BRIEF/,
+            rxId: /12161 Berlin ([0-9]+)/,
+            rxDate: /12161 Berlin [0-9]+ (\d+)\.(\d+)\.(\d+)/,
+            dateFmt: [2,1,0],
+            rxSum: /Rechnungsbetrag \(inklusive Umsatzsteuer\) (\d+,\d+)/,
+            tags: "dhl,post,shipping"
           },
           {
             name: "Telekom",
