@@ -253,7 +253,7 @@ SQL
     # a duplicate "real" transaction appears later
     #
     @bank_rows = @bank_acc_db.execute <<-SQL
-      select id,date,amount_cents,details,transaction_code,"EUR" from transactions where length(bank_reference)=0 order by date desc;
+      select id,date,amount_cents,details,transaction_code,"EUR" from transactions where swift_code="NMSC" order by date desc;
     SQL
 
     acc_key = "assets:bank-#{acc_id}"
@@ -547,7 +547,8 @@ SQL
     quarters.keys
   end
 
-    def clean_bank_row_description(raw_desc)
+  def clean_bank_row_description(raw_desc)
+    # FIXME HACK
     if raw_desc[0..1]=="PP"
       return {
         :details => raw_desc,
@@ -558,8 +559,8 @@ SQL
     
     iban_rx = /[A-Z0-9]+ [A-Z]{2}[0-9]{2}[A-Z0-9]{8,}/
 
-    fields = raw_desc.scan(/([A-Z]{4}[\+\-][^ ]+)/)
-    desc = "SVWZ+"+((raw_desc.split("SVWZ+").last).split(/([A-Z]{4}[\+\-])/).first)
+    fields = raw_desc.scan(/([A-Z]{4}[\+][^ ]+)/)
+    desc = "SVWZ+"+((raw_desc.split("SVWZ+").last).split(/([A-Z]{4}[\+])/).first)
 
     # heuristic to fix text with bogus spaces inserted
     fixed_desc = ""
