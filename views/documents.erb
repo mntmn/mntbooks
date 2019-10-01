@@ -92,7 +92,7 @@
             <div class="form-group">
               <label class="form-label">IDs in the document</label>
               
-              <input class="form-input" type="text" name="doc-<%= b[:id] %>-docid" id="doc-<%= b[:id] %>-docid" placeholder="XYZ1232-234,foo99,24562341" value="<%= b[:metadata][:docid] %>" pattern="[a-zA-Z\-0-9,]+" required>
+              <input class="form-input" type="text" name="doc-<%= b[:id] %>-docid" id="doc-<%= b[:id] %>-docid" placeholder="XYZ1232-234,foo99,24562341" value="<%= b[:metadata][:docid] %>" pattern="[a-zA-Z\-0-9,]+" required <% if i==1 %>autofocus<% end %>>
             
               <label class="form-label">Main Date (Invoice Date etc.)</label>
               <input type="text" name="doc-<%= b[:id] %>-date" id="doc-<%= b[:id] %>-date" placeholder="YYYY-MM-DD" value="<%= b[:metadata][:date] %>" style="width: 100px;" pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}" required>
