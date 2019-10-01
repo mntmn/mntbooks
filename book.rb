@@ -393,7 +393,7 @@ SQL
     ### load all document rows into memory
     
     @doc_rows = @book_db.execute <<-SQL
-select path,state,docid,date,sum,tags from documents order by date;
+select path,state,docid,date,sum,tags from documents order by date desc;
 SQL
 
     @doc_rows.each do |doc|
