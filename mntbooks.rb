@@ -341,8 +341,8 @@ class MNTBooks < Sinatra::Base
       end
 
       default_comment = current_iso_date_time
-      if request.env["REMOTE_USER"] && request.env["REMOTE_USER"].size>0
-        default_comment = "#{current_iso_date_time} #{request.env['REMOTE_USER']}"
+      if request.env["HTTP_REMOTE_USER"] && request.env["HTTP_REMOTE_USER"].size>0
+        default_comment = "#{current_iso_date_time} #{request.env['HTTP_REMOTE_USER']}"
       end
       
       erb :todo, :locals => {
