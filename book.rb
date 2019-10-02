@@ -487,11 +487,25 @@ SQL
         Dir.mkdir(EXPORT_FOLDER) unless File.exists?("export")
         Dir.mkdir("#{EXPORT_FOLDER}/#{subdir}") unless File.exists?("export/#{subdir}")
 
-        subdir_category = "incoming-invoices-non-resale"
-        if credit.match /(parts|packaging|shipping)/
-          subdir_category = "incoming-invoices-resale"
-        elsif credit.match /sales/
-          subdir_category = "outgoing-invoices"
+        subdir_category = "expense-misc"
+        if credit.match /sales/
+          subdir_category = "income"
+          
+        elsif credit.match /shipping/
+          subdir_category = "expense-shipping"
+        elsif credit.match /consumables/
+          subdir_category = "expense-consumables"
+        elsif credit.match /salaries/
+          subdir_category = "expense-salaries"
+        elsif credit.match /services/
+          subdir_category = "expense-services"
+          
+        elsif credit.match /(parts|packaging)/
+          subdir_category = "purchase-parts-packaging"
+        elsif credit.match /tools/
+          subdir_category = "purchase-tools"
+        elsif credit.match /furniture/
+          subdir_category = "purchase-furniture"
         end
         
         dirname = "#{EXPORT_FOLDER}/#{subdir}/#{subdir_category}"
@@ -500,9 +514,13 @@ SQL
         receipt.split(",").each do |r|
           unless receipt[0]=="/"
             fname = "#{dirname}/#{date}-#{amount}#{currency}-#{r}"
-            #puts "#{fname} <- #{r}"
+            puts "#{fname} <- #{credit} #{debit}"
             src = DOC_FOLDER+"/"+r
-            FileUtils.cp(src,fname)
+            begin
+              FileUtils.cp(src,fname)
+            rescue
+              puts "ERROR: file #{src} missing!"
+            end
           end
         end
       end
@@ -532,14 +550,18 @@ SQL
           Dir.mkdir(EXPORT_FOLDER) unless File.exists?("export")
           Dir.mkdir("#{EXPORT_FOLDER}/#{subdir}") unless File.exists?("export/#{subdir}")
 
-          subdir_category = "incoming-invoices-cash-non-resale"
+          subdir_category = "expense-cash"
           dirname = "#{EXPORT_FOLDER}/#{subdir}/#{subdir_category}"
           Dir.mkdir(dirname) unless File.exists?(dirname)
           
           fname = "#{dirname}/#{date}-#{amount}#{currency}-#{tags.join('-')}.pdf"
           puts "#{fname} <- #{row[:path]}"
           src = DOC_FOLDER+"/"+row[:path]
-          FileUtils.cp(src,fname)
+          begin
+            FileUtils.cp(src,fname)
+          rescue
+            puts "ERROR: file #{src} missing!"
+          end
         end
       end
     end
