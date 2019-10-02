@@ -488,13 +488,15 @@ SQL
         Dir.mkdir("#{EXPORT_FOLDER}/#{subdir}") unless File.exists?("export/#{subdir}")
 
         subdir_category = "expense-misc"
-        if credit.match /sales/
+        if debit.match /sales/
           subdir_category = "income"
           
-        elsif credit.match /shipping/
+        elsif credit.match /(shipping|dhl|post)/
           subdir_category = "expense-shipping"
         elsif credit.match /consumables/
           subdir_category = "expense-consumables"
+        elsif credit.match /rent/
+          subdir_category = "expense-rent"
         elsif credit.match /salaries/
           subdir_category = "expense-salaries"
         elsif credit.match /services/
@@ -502,9 +504,9 @@ SQL
           
         elsif credit.match /(parts|packaging)/
           subdir_category = "purchase-parts-packaging"
-        elsif credit.match /tools/
+        elsif credit.match /(tools|monitors|computers|network)/
           subdir_category = "purchase-tools"
-        elsif credit.match /furniture/
+        elsif credit.match /(furniture|kitchen)/
           subdir_category = "purchase-furniture"
         end
         
