@@ -200,10 +200,10 @@
           {
             name: "Deutsche Post Paket",
             rxMatch: /Niederlassung BRIEF/,
-            rxId: /12161 Berlin ([0-9]+)/,
-            rxDate: /12161 Berlin [0-9]+ (\d+)\.(\d+)\.(\d+)/,
+            rxId: /Rechnungsnummer ([0-9]+)/,
+            rxDate: /Rechnungsdatum (\d+)\.(\d+)\.(\d+)/,
             dateFmt: [2,1,0],
-            rxSum: /Rechnungsbetrag \(inklusive Umsatzsteuer\) (\d+,\d+)/,
+            rxSum: /(\d+,\d+) Wir buchen/,
             tags: "dhl,post,shipping"
           },
           {
