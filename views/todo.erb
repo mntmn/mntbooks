@@ -24,7 +24,7 @@
           <% if b[:details_line_1] %>
           <td class="details">
             <%= b[:details_line_1] %><br><%= b[:details_line_2] %>
-            <% if b[:details][0..2]=="PP " %><a href="https://www.paypal.com/activity/payment/<%= b[:id] %>" target="_blank">⤳</a><% end %>
+            <% if b[:details][0..7]=="(PayPal)" %><a href="https://www.paypal.com/activity/payment/<%= b[:id] %>" target="_blank">🔍</a><% end %>
           </td>
           <% else %>
           <td class="details"><%= b[:details] %></td>

@@ -294,7 +294,7 @@ SQL
           new_booking[:debit_txn_id] = row[0]
           
           @bookings_todo.push(row)
-          @bookings_by_txn_id[id] = new_booking
+          @bookings_by_txn_id[id] = new_booking # TODO double check
         end
       else
         # we got some money.
@@ -304,7 +304,7 @@ SQL
           new_booking[:credit_txn_id] = row[0]
           
           @bookings_todo.push(row)
-          @bookings_by_txn_id[id] = new_booking
+          @bookings_by_txn_id[id] = new_booking # TODO double check
         end
       end
     end
@@ -331,7 +331,7 @@ SQL
       status = row[8]
       email = row[4]
       name = row[5]
-      details = "PP #{status} #{txn_type} #{email} #{name}"
+      details = "(PayPal) #{status} #{txn_type} #{email} #{name}"
       
       new_booking = {
         :date => date,
@@ -364,11 +364,9 @@ SQL
             # we paid money
             # there is no booking / receipt. can we create one automatically?
 
-            new_booking[:amount] = -amount # only positive amounts are transferred
+            new_booking[:amount_cents] = -amount # only positive amounts are transferred
             new_booking[:debit_account] = acc_key
             new_booking[:debit_txn_id] = id
-
-            bank_row[2] = -amount
             
             @bookings_todo.push(bank_row)
             @bookings_by_txn_id[id] = new_booking
@@ -573,7 +571,7 @@ SQL
 
   def clean_bank_row_description(raw_desc)
     # FIXME HACK
-    if raw_desc[0..1]=="PP"
+    if raw_desc[0..7]=="(PayPal)"
       return {
         :details => raw_desc,
         :fields => [],
