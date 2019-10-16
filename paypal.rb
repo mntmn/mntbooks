@@ -10,7 +10,7 @@ require 'pp'
 acc_id = ENV["PP_USER"]
 
 if (ARGV[0] && ARGV[0].size!=10)
-  puts "Usage: ruby paypal.rb <start date, i.e. 2018-06-01>"
+  puts "Usage: ruby paypal.rb <start date, i.e. 2018-06-01> <end date>"
   puts "And set PP_USER, PP_PASS, PP_CERT."
   exit
 end
@@ -18,7 +18,16 @@ end
 start_date = Date.today-14
 if ARGV[0]
   start_date = ARGV[0]+"T00:00:00.000Z"
+else
+  start_date = "#{start_date}T00:00:00.000Z"
 end
+
+end_date = ""
+if ARGV[1]
+  end_date = ARGV[1]+"T23:59:59.000Z"
+end
+
+puts "start_date: #{start_date} end_date: #{end_date}"
 
 db_exists = false
 db_filename = "paypal-#{acc_id}.db"
@@ -71,8 +80,11 @@ data = {
   #:version => "50.0", # Default is 50.0 as well... but now you can specify it
   :method => "TransactionSearch",
   :StartDate => start_date
-  #:amt => "55"
 }
+
+if end_date!=""
+  data[:EndDate] = end_date
+end
 
 result = p.call_paypal(data) # will return a hash
 #puts result["ACK"] # Success
