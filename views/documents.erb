@@ -113,7 +113,7 @@
               <% if b[:state] == "booked" %>
                 Booked
               <% else %>
-              <select name="doc-<%= b[:id] %>-state">
+              <select name="doc-<%= b[:id] %>-state" id="doc-<%= b[:id] %>-state">
                 <option value="unfiled" <%= b[:state]=="unfiled"?"selected":"" %>>Unfiled</option>
                 <option value="defer" <%= b[:state]=="defer"?"selected":"" %>>Ready for Booking</option>
                 <option value="todo" <%= b[:state]=="todo"?"selected":"" %>>TODO</option>
@@ -260,6 +260,7 @@
             document.getElementById("doc-"+id+"-sum").value = sum
             document.getElementById("doc-"+id+"-tags").value = mt.tags
             document.getElementById("doc-"+id+"-tags").focus()
+            document.getElementById("doc-"+id+"-state").value = "defer"
             break
           }
         }
