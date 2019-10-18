@@ -214,6 +214,15 @@
             dateFmt: [2,1,0],
             rxSum: /Rechnungsbetrag (\d+,\d+)/,
             tags: "telekom,internet,phone"
+          },
+          {
+            name: "GitHub",
+            rxMatch: /GitHub\.com/,
+            rxId: /Transaction ID ([A-Z0-9]+)/,
+            rxDate: /Date (\d+)-(\d+)-(\d+)/,
+            dateFmt: [0,1,2],
+            rxSum: /Total \$(\d+\.\d+)/,
+            tags: "github"
           }
         ]
         
