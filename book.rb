@@ -8,6 +8,7 @@ require 'ostruct'
 require 'pdfkit'
 require 'zip'
 require 'erb'
+require 'uri'
 
 require './config.rb'
 
@@ -455,11 +456,24 @@ SQL
     quarters = {}
     
     rows = @book_db.execute <<-SQL
-select id,debit_account,credit_account,date,amount_cents,receipt_url,invoice_id,currency from book order by date desc;
+select id,debit_account,credit_account,date,amount_cents,receipt_url,invoice_id,currency,details,comment from book order by date desc;
 SQL
 
+    Dir.mkdir(EXPORT_FOLDER) unless File.exists?(EXPORT_FOLDER)
+
+    csv_quarters = {}
+    booked_documents = {}
+    
     rows.each do |row|
+      receipt_paths = []
+      
       row = OpenStruct.new(row)
+      
+      date = row[:date][0..9]
+      mon = date[5..6].to_i
+      quarter = (mon-1)/3+1
+      subdir = "#{date[0..3]}Q#{quarter}"
+      
       receipt = row[:receipt_url]
       if row[:debit_account].nil?
       #puts "Warning: no debit_account"
@@ -471,21 +485,20 @@ SQL
       elsif row[:credit_account].match(/^customer:/)
       else
         receipt = receipt.split('#')[0]
-        date = row[:date][0..9]
         debit = row[:debit_account].gsub(":","-")
         credit = row[:credit_account].gsub(":","-")
         amount = row[:amount_cents]/100
         currency = row[:currency]
 
-        mon = date[5..6].to_i
-        quarter = (mon-1)/3+1
-        subdir = "#{date[0..3]}Q#{quarter}"
         quarters[subdir] = true
 
-        Dir.mkdir(EXPORT_FOLDER) unless File.exists?("export")
-        Dir.mkdir("#{EXPORT_FOLDER}/#{subdir}") unless File.exists?("export/#{subdir}")
+        Dir.mkdir("#{EXPORT_FOLDER}/#{subdir}") unless File.exists?("#{EXPORT_FOLDER}/#{subdir}")
 
         subdir_category = "expense-misc"
+        if credit.match /assets/
+          subdir_category = "income-misc"
+        end
+        
         if debit.match /sales/
           subdir_category = "income"
           
@@ -513,17 +526,53 @@ SQL
         
         receipt.split(",").each do |r|
           unless receipt[0]=="/"
-            fname = "#{dirname}/#{date}-#{amount}#{currency}-#{r}"
-            puts "#{fname} <- #{credit} #{debit}"
+            fname = "#{date}-#{amount}#{currency}-#{r}"
+            fname_full = "#{dirname}/#{fname}"
+            puts "#{fname_full} <- #{credit} #{debit}"
             src = DOC_FOLDER+"/"+r
             begin
-              FileUtils.cp(src,fname)
+              FileUtils.cp(src,fname_full)
             rescue
               puts "ERROR: file #{src} missing!"
             end
+
+            receipt_paths.push("#{subdir_category}/#{fname}")
+            
+            booked_documents[r] = true
           end
         end
       end
+
+      # receipts saved, generate csv row
+
+      asset_account = row[:credit_account]
+      
+      amount_int  = row[:amount_cents]/100
+      amount_frac = row[:amount_cents]%100
+      amount_frac = "0#{amount_frac}" if amount_frac<10
+      
+      if row[:debit_account].match /assets/
+        amount_int = -amount_int
+        asset_account = row[:debit_account]
+      end
+      amount = "#{amount_int}.#{amount_frac}"
+
+      if !csv_quarters.include?(subdir)
+        csv_quarters[subdir] = []
+      end
+
+      comment_cleaned = row[:comment].to_s.sub(/^\d{4}-\d{2}-\d{2}T[^ ]+ [^ ]+ ?/,"")
+      
+      csv_quarters[subdir].push([
+                               row[:date][0..9],
+                               row[:currency],
+                               amount,
+                               asset_account,
+                               row[:details],
+                               receipt_paths.join("\r\n"),
+                               comment_cleaned,
+                               row[:invoice_id]
+                             ])
     end
 
     # FIXME these should also be booked as cash transactions
@@ -535,36 +584,74 @@ SQL
     rows.each do |row|
       row = OpenStruct.new(row)
 
-      if !row[:tags].nil?
-        tags = row[:tags].split(",").sort
-        if tags.include?("cash")
-          date = row[:date][0..9]
-          amount = row[:sum]
-          currency = "EUR" # FIXME
-          
-          mon = date[5..6].to_i
-          quarter = (mon-1)/3+1
-          subdir = "#{date[0..3]}Q#{quarter}"
-          quarters[subdir] = true
-
-          Dir.mkdir(EXPORT_FOLDER) unless File.exists?("export")
-          Dir.mkdir("#{EXPORT_FOLDER}/#{subdir}") unless File.exists?("export/#{subdir}")
-
-          subdir_category = "expense-cash"
-          dirname = "#{EXPORT_FOLDER}/#{subdir}/#{subdir_category}"
-          Dir.mkdir(dirname) unless File.exists?(dirname)
-          
-          fname = "#{dirname}/#{date}-#{amount}#{currency}-#{tags.join('-')}.pdf"
-          puts "#{fname} <- #{row[:path]}"
-          src = DOC_FOLDER+"/"+row[:path]
-          begin
-            FileUtils.cp(src,fname)
-          rescue
-            puts "ERROR: file #{src} missing!"
+      if !booked_documents.include?(row[:path]) && row[:sum].to_f>0
+        account = "unbooked"
+        
+        if !row[:tags].nil?
+          tags = row[:tags].split(",").sort
+          if tags.include?("cash")
+            account = "cash"
           end
+        end
+        
+        date = row[:date][0..9]
+        amount = row[:sum]
+        currency = "EUR" # FIXME
+        
+        mon = date[5..6].to_i
+        quarter = (mon-1)/3+1
+        subdir = "#{date[0..3]}Q#{quarter}"
+        quarters[subdir] = true
+
+        Dir.mkdir("#{EXPORT_FOLDER}/#{subdir}") unless File.exists?("#{EXPORT_FOLDER}/#{subdir}")
+
+        subdir_category = account
+        dirname = "#{EXPORT_FOLDER}/#{subdir}/#{subdir_category}"
+        Dir.mkdir(dirname) unless File.exists?(dirname)
+
+        fname = "#{date}-#{amount}#{currency}-#{tags.join('-')}.pdf"
+        fname_full = "#{dirname}/#{fname}"
+        
+        puts "#{fname_full} <- #{row[:path]}"
+        src = DOC_FOLDER+"/"+row[:path]
+        begin
+          FileUtils.cp(src,fname_full)
+        rescue
+          puts "ERROR: file #{src} missing!"
+        end
+        
+        if !csv_quarters.include?(subdir)
+          csv_quarters[subdir] = []
+        end
+
+        csv_quarters[subdir].push([
+                                    date,
+                                    currency,
+                                    amount,
+                                    account,
+                                    row[:docid],
+                                    "#{subdir_category}/#{fname}",
+                                    tags.join(" "),
+                                    row[:invoice_id]
+                                  ])
+      end
+    end
+
+    # generate CSV report for each quarter
+    
+    csv_quarters.keys.each do |quarter|
+      sorted = csv_quarters[quarter].sort {|a,b| a[0] <=> b[0]}
+
+      dirname = "#{EXPORT_FOLDER}/#{quarter}"
+      Dir.mkdir(dirname) unless File.exists?(dirname)
+      csv_path = "#{dirname}/table.csv"
+      CSV.open(csv_path, "wb") do |csv|
+        sorted.each do |r|
+          csv << r
         end
       end
     end
+    
 
     quarters.keys
   end
