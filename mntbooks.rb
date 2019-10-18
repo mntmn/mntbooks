@@ -316,6 +316,7 @@ class MNTBooks < Sinatra::Base
       # collect all bank, paypal etc transactions that
       # have no booking associated with them
       rows = book.bookings_todo.map(&method(:bank_row_to_hash))
+      rows = rows.sort {|a,b| b[:date] <=> a[:date]}
       
       debit_accounts = book.debit_accounts
       credit_accounts = book.credit_accounts
