@@ -354,7 +354,7 @@ SQL
       # FIXME create 2nd bookings for fees
       if txn_type=="Transfer" || txn_type=="Authorization"
       # TODO: update matching bank transfer with txn id
-      elsif status!="Completed" && status!="Refunded"
+      elsif status!="Completed" && status!="Refunded" && status!="Partially Refunded"
       # TODO: not sure what to do with pending txns... maybe display somewhere else
       elsif txn_type.match(/Currency Conversion/) || txn_type.match(/Fee Reversal/)
       # TODO: later we can book these to currency exchange accounts?
