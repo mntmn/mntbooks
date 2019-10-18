@@ -2,7 +2,7 @@
   <head>
     <%= erb :style %>
   </head>
-  <body>
+  <body onload="initAutoFill()">
   <%= erb :menu, :locals => { :active => active, :prefix => prefix } %>
   <style>
     .text {
@@ -50,7 +50,11 @@
     .sort.desc::before {
         content: "▼";
     }
-    
+
+    .autofill-button {
+        text-decoration:underline;
+        background-color: #ffff88;
+    }
   </style>
   <div id="docs">
     <div class="filter" style="display: none">
@@ -84,7 +88,7 @@
         <form method="POST" action="documents?state=<%= state %>#doc<%= b[:id] %>">
           <h3 class="title"><a target="_blank" href="<%= prefix %>/pdf/<%= b[:title] %>"><%= b[:title] %></a></h3>
           <p class="created">Scanned: <%= b[:created].strftime("%Y-%m-%d")  %> 
-            <a href="#doc-<%= b[:id] %>" onclick="autoFill('<%=b[:id]%>')" style="text-decoration:underline">Autofill</a>
+            <a href="#doc-<%= b[:id] %>" class="autofill-button" onclick="autoFill('<%=b[:id]%>')">Autofill</a>
           </p>
           
           <div class="metadata">
@@ -158,74 +162,75 @@
         if ((m+"").length==2) return m+""
         return "??"
       }
+      
       function normalizeYear(y) {
         if ((y+"").length==2) return "20"+y
         if ((y+"").length==4) return y+""
         return "????"
       }
+
+      var matchers = [
+        {
+          name: "amazon business",
+          rxMatch: /www\.amazon\.de\/contact/,
+          rxId: /Rechnungsnummer ([A-Z0-9\-]+)/,
+          rxDate: /Lieferdatum +(\d+) ([^ ]+) (\d+)/,
+          dateFmt: [2,1,0],
+          rxSum: /Zahlbetrag (\d+,\d+)/,
+          tags: "amazon"
+        },
+        {
+          name: "DHL Online Frankierung",
+          rxMatch: /DHL Online Frankierung/,
+          rxId: /Rechnungs-Nr.: ([A-Z0-9\-]+)/,
+          rxDate: /(\d+)\.(\d+)\.(\d+) Rechnungs/,
+          dateFmt: [2,1,0],
+          rxSum: /Rechnungsbetrag: (\d+,\d+)/,
+          tags: "dhl,post,postage"
+        },
+        {
+          name: "DHL Paket",
+          rxMatch: /DHL Paket GmbH/,
+          rxId: /Gläubiger-ID: ([0-9]+)/,
+          rxDate: /Gläubiger-ID: [0-9]+ (\d+)\.(\d+)\.(\d+)/,
+          dateFmt: [2,1,0],
+          rxSum: /Rechnungsbetrag \(inklusive Umsatzsteuer\) (\d+,\d+)/,
+          tags: "dhl,shipping"
+        },
+        {
+          name: "Deutsche Post Paket",
+          rxMatch: /Niederlassung BRIEF/,
+          rxId: /Rechnungsnummer ([0-9]+)/,
+          rxDate: /Rechnungsdatum (\d+)\.(\d+)\.(\d+)/,
+          dateFmt: [2,1,0],
+          rxSum: /(\d+,\d+) EUR Wir buchen/,
+          tags: "dhl,post,shipping"
+        },
+        {
+          name: "Telekom",
+          rxMatch: /Telekom Deutschland/,
+          rxId: /Rechnungsnummer ([0-9 ]+)/,
+          rxDate: /Datum (\d+)\.(\d+)\.(\d+)/,
+          dateFmt: [2,1,0],
+          rxSum: /Rechnungsbetrag (\d+,\d+)/,
+          tags: "telekom,internet,phone"
+        },
+        {
+          name: "GitHub",
+          rxMatch: /GitHub\.com/,
+          rxId: /Transaction ID ([A-Z0-9]+)/,
+          rxDate: /Date (\d+)-(\d+)-(\d+)/,
+          dateFmt: [0,1,2],
+          rxSum: /Total \$(\d+\.\d+)/,
+          tags: "github"
+        }
+      ]
       
       function autoFill(id) {
         var text = document.getElementById("doc-"+id+"-text").innerText
         text = text.replace("\n"," ")
         text = text.replace("  "," ")
 
-        var matchers = [
-          {
-            name: "amazon business",
-            rxMatch: /www\.amazon\.de\/contact/,
-            rxId: /Rechnungsnummer ([A-Z0-9\-]+)/,
-            rxDate: /Lieferdatum +(\d+) ([^ ]+) (\d+)/,
-            dateFmt: [2,1,0],
-            rxSum: /Zahlbetrag (\d+,\d+)/,
-            tags: "amazon"
-          },
-          {
-            name: "DHL Online Frankierung",
-            rxMatch: /DHL Online Frankierung/,
-            rxId: /Rechnungs-Nr.: ([A-Z0-9\-]+)/,
-            rxDate: /(\d+)\.(\d+)\.(\d+) Rechnungs/,
-            dateFmt: [2,1,0],
-            rxSum: /Rechnungsbetrag: (\d+,\d+)/,
-            tags: "dhl,post,postage"
-          },
-          {
-            name: "DHL Paket",
-            rxMatch: /DHL Paket GmbH/,
-            rxId: /Gläubiger-ID: ([0-9]+)/,
-            rxDate: /Gläubiger-ID: [0-9]+ (\d+)\.(\d+)\.(\d+)/,
-            dateFmt: [2,1,0],
-            rxSum: /Rechnungsbetrag \(inklusive Umsatzsteuer\) (\d+,\d+)/,
-            tags: "dhl,shipping"
-          },
-          {
-            name: "Deutsche Post Paket",
-            rxMatch: /Niederlassung BRIEF/,
-            rxId: /Rechnungsnummer ([0-9]+)/,
-            rxDate: /Rechnungsdatum (\d+)\.(\d+)\.(\d+)/,
-            dateFmt: [2,1,0],
-            rxSum: /(\d+,\d+) EUR Wir buchen/,
-            tags: "dhl,post,shipping"
-          },
-          {
-            name: "Telekom",
-            rxMatch: /Telekom Deutschland/,
-            rxId: /Rechnungsnummer ([0-9 ]+)/,
-            rxDate: /Datum (\d+)\.(\d+)\.(\d+)/,
-            dateFmt: [2,1,0],
-            rxSum: /Rechnungsbetrag (\d+,\d+)/,
-            tags: "telekom,internet,phone"
-          },
-          {
-            name: "GitHub",
-            rxMatch: /GitHub\.com/,
-            rxId: /Transaction ID ([A-Z0-9]+)/,
-            rxDate: /Date (\d+)-(\d+)-(\d+)/,
-            dateFmt: [0,1,2],
-            rxSum: /Total \$(\d+\.\d+)/,
-            tags: "github"
-          }
-        ]
-        
         for (var i=0; i<matchers.length; i++) {
           var mt = matchers[i]
           if (text.match(mt.rxMatch)) {
@@ -256,6 +261,29 @@
             document.getElementById("doc-"+id+"-tags").value = mt.tags
             document.getElementById("doc-"+id+"-tags").focus()
             break
+          }
+        }
+      }
+
+      function initAutoFill() {
+        var els = document.getElementsByClassName("text")
+
+        for (var i=0; i<els.length; i++) {
+          var text = els[i].innerText
+
+          var matched = false;
+          for (var j=0; j<matchers.length; j++) {
+            var mt = matchers[j]
+            if (text.match(mt.rxMatch)) {
+              matched = true;
+            }
+          }
+
+          if (!matched) {
+            var btn = els[i].parentElement.getElementsByClassName("autofill-button")
+            if (btn.length) {
+              btn[0].remove()
+            }
           }
         }
       }
