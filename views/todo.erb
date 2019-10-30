@@ -21,14 +21,16 @@
           <td class="date"><%= b[:date] %></td>
           <td class="amount"><%= b[:currency] %></td>
           <td class="amount <%= b[:amount_cents]>0?'positive':'' %>"><%= '%.2f' % (b[:amount_cents]/100.0) %></td>
-          <% if b[:details_line_1] %>
           <td class="details">
-            <%= b[:details_line_1] %><br><%= b[:details_line_2] %>
-            <% if b[:details][0..7]=="(PayPal)" %><a href="https://www.paypal.com/activity/payment/<%= b[:id] %>" target="_blank">🔍</a><% end %>
+            <b title="<%= b[:raw] %>"><%= b[:fields][:trailer]||"Bank?" %></b><br>
+
+            <% if b[:type] == :paypal %>
+              <a href="https://www.paypal.com/activity/payment/<%= b[:id] %>" target="_blank">🔍</a>
+              <%= b[:fields][:email] %>
+            <% end %>
+
+            <%= b[:details] %>
           </td>
-          <% else %>
-          <td class="details"><%= b[:details] %></td>
-          <% end %>
           <td>
             <label><input placeholder="Account" id="acc-<%= b[:id] %>" type="text" name="booking-<%= b[:id] %>-account" class="account"></label>
           </td>

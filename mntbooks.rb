@@ -52,23 +52,17 @@ class MNTBooks < Sinatra::Base
   # select id,debit_account,debit_txn_id,credit_account,credit_txn_id,date,amount,details,receipt_url,currency from book;
   def book_row_to_hash(b)  
     klass = ""
-    #if !b[:credit_account].nil? && b[:credit_account].match("assets:bank-")
-    #  klass = "credit-bank"
-    #end
-
     receipt_urls = make_receipt_urls(b[:receipt_url])
     desc = book.clean_bank_row_description(b[:details])
 
     return {
       :id => b[:id],
       :date => b[:date][0..9],
-      :currency => b[:currency], #.sub("EUR","€"),
+      :currency => b[:currency],
       :amount_cents => b[:amount_cents],
       :debit_account => b[:debit_account],
       :credit_account => b[:credit_account],
       :details => desc[:details],
-      :details_line_1 => desc[:details_line_1]||desc[:details],
-      :details_line_2 => desc[:details_line_2],
       :comment => b[:comment],
       :receipt_urls => receipt_urls,
       :css_class => klass
@@ -303,10 +297,9 @@ class MNTBooks < Sinatra::Base
         :amount_cents => b[2],
         :currency => b[5],
         :details => desc[:details],
-        :details_line_1 => desc[:details_line_1]||desc[:details],
-        :details_line_2 => desc[:details_line_2],
-        :fields => desc[:fields],
-        :iban => desc[:iban]
+        :type => desc[:type],
+        :raw => desc[:raw],
+        :fields => desc[:fields]
       }
     end
 

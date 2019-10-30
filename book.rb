@@ -657,57 +657,73 @@ SQL
   end
 
   def clean_bank_row_description(raw_desc)
-    # FIXME HACK
+    ### PayPal
     if raw_desc[0..7]=="(PayPal)"
-      return {
-        :details => raw_desc,
-        :fields => [],
-        :iban => nil
-      }
-    end
-    
-    iban_rx = /[A-Z0-9]+ [A-Z]{2}[0-9]{2}[A-Z0-9]{8,}/
 
-    fields = raw_desc.scan(/([A-Z]{4}[\+][^ ]+)/)
-    desc = "SVWZ+"+((raw_desc.split("SVWZ+").last).split(/([A-Z]{4}[\+])/).first)
-
-    # heuristic to fix text with bogus spaces inserted
-    fixed_desc = ""
-    iban = ""
-    if desc.size>27 && desc[27]==" "
-      # remove space in first field
-      desc = desc[0..26]+desc[28..-1]
-    elsif desc.size>26 && desc[26]==" "
-      # sometimes the first field can be 1 char shorter
-      desc = desc[0..25]+desc[27..-1]
-    end
-
-    # match an iban and after that, remove another spacer
-    iban_match = desc.match(iban_rx)
-    if iban_match
-      iban = iban_match[0]
-      idx = desc.index(iban_rx)
-      idx_split = idx+iban.size+27
-
-      if (desc.size>=idx_split+2)
-        desc = desc[0..idx_split]+desc[idx_split+2..-1]
-      else
-        desc = desc[0..idx_split]
+      fields = {}
+      email_rx = /([^ ]+@[^ ]+\.[^ ]+)/
+      elements = raw_desc.split(email_rx)
+      key = :status
+      elements.each do |elem|
+        if elem.match(email_rx)
+          fields[:email] = elem
+          key = :trailer
+        else
+          fields[key] = elem
+        end
       end
+      
+      obj = {
+        :type => :paypal,
+        :details => elements.first,
+        :raw => raw_desc,
+        :fields => fields
+      }
 
-      desc1 = desc[0..idx-1].gsub("SVWZ+","")
-      desc2 = desc[idx+iban.size+1..-1]
+      pp obj
+
+      return obj
     end
 
-    desc.gsub!("SVWZ+","")
-    
-    return {
-      :details => desc,
-      :details_line_1 => desc1,
-      :details_line_2 => desc2,
-      :fields => fields,
-      :iban => iban
+    ### FinTS
+    #          BIC         IBAN
+    bic_iban_rx = /([A-Z0-9]+ [A-Z]{2}[0-9]{2}[A-Z0-9]{8,})/
+    # BELADEBEXXX DE02100500000990004716 Berliner Verkehrsbetriebe ( BVG)
+
+    key_rx = /( [A-Z]{4}\+)/
+    elements = raw_desc.split(key_rx)
+
+    fields = {}
+    key = :prefix
+    elements.each do |elem|
+      if elem.match(key_rx)
+        key = elem.gsub(/[+ ]/,"")
+      else
+        if elem.match(bic_iban_rx)
+          trailer = elem.split(bic_iban_rx)
+          if trailer.first
+            fields[key] = trailer.first
+          end
+
+          fields[:bic_iban] = trailer[1]
+
+          if trailer.size>2
+            fields[:trailer] = trailer[2..-1].join(" ")
+          end
+        else
+          fields[key] = elem
+        end
+      end
+    end
+
+    obj = {
+      :type => :fints,
+      :details => fields["SVWZ"]||raw_desc,
+      :raw => raw_desc,
+      :fields => fields
     }
+    
+    return obj
   end
 
   def fetch_all_documents()
