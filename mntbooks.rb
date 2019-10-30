@@ -64,6 +64,9 @@ class MNTBooks < Sinatra::Base
       :credit_account => b[:credit_account],
       :details => desc[:details],
       :comment => b[:comment],
+      :fields => desc[:fields],
+      :raw => desc[:raw],
+      :type => desc[:type],
       :receipt_urls => receipt_urls,
       :css_class => klass
     }
