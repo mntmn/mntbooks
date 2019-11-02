@@ -1,0 +1,88 @@
+<html>
+  <head>
+    <%= erb :style %>
+    <style>
+      .number-table td, th {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      }
+    </style>
+  </head>
+  <%= erb :menu, :locals => { :active => :book, :prefix => prefix } %>
+
+  <%
+    def nf(n)
+      "%0.3f" % (n/1000.0)
+    end
+    %>
+
+  <p><small>Values are 1000s of EUR.</small></p>
+  
+  <body>
+    <table class="number-table">
+      <tr>
+        <th>Month:</th>
+        <% months.each do |m| %>
+        <th><%= m[:month] %></th>
+        <% end %>
+        <th><%= year %></th>
+      </tr>
+      <tr>
+        <th>Spend:</th>
+        <% months.each do |m| %>
+        <td>
+          <b><%= nf(m[:spend]) %></b><br>
+          <table class="number-table">
+            <% m[:spend_accounts].each do |sa| %>
+            <tr>
+              <td>
+                <%= sa['credit_account'] %>
+                <% if (sa['credit_account'].size<2) %>
+                <i>no account!</i>
+                <% end %>
+              </td>
+              <td>
+                <%= nf(sa['spend']) %>
+              </td>
+            </tr>
+            <% end %>
+          </table>
+        </td>
+        <% end %>
+        <th><%= nf(year_spend) %></th>
+      </tr>
+      <tr>
+        <th>Earnings:</th>
+        <% months.each do |m| %>
+        <td>
+          <b><%= nf(m[:earn]) %></b><br>
+          
+          <table class="number-table">
+            <% m[:earn_accounts].each do |sa| %>
+            <tr>
+              <td>
+                <%= sa['debit_account'] %>
+                <% if (sa['debit_account'].size<2) %>
+                <i>no account!</i>
+                <% end %>
+              </td>
+              <td>
+                <%= nf(sa['earn']) %>
+              </td>
+            </tr>
+            <% end %>
+          </table>
+        </td>
+        <% end %>
+        <th><%= nf(year_earn) %></th>
+      </tr>
+      <tr>
+        <th>Profit/Loss:</th>
+        <% months.each do |m| %>
+        <td class="amount <% if (m[:earn]-m[:spend])<0 %>negative<% else %>positive<% end %>"><b><%= nf(m[:earn]-m[:spend]) %></b></td>
+        <% end %>
+        <th><%= nf(year_earn-year_spend) %></th>
+      </tr>
+    </table>
+  </body>
+</html>
