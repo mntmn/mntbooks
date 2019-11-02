@@ -7,6 +7,10 @@
     font-weight: bold;
     background-color: lightgreen;
 }
+.amount.negative {
+    font-weight: bold;
+    background-color: lightcoral;
+}
 .date { white-space: nowrap; }
 body {
     margin: 30px;

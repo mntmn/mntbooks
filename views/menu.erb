@@ -44,6 +44,14 @@
   </span>
   
   <span>
+  <% if active == :stats %>
+  Stats
+  <% else %>
+  <a href="<%= prefix %>/stats?year=2019">Stats</a>
+  <% end %>
+  </span>
+  
+  <span>
   <% if active == :export %>
   Export
   <% else %>

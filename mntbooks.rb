@@ -355,6 +355,24 @@ class MNTBooks < Sinatra::Base
       redirect PREFIX+"/book"
     end
 
+    get '/stats' do
+
+      year = params[:year].to_i
+      months = book.get_stats_monthly(year)
+
+      year_spend = months.inject(0){|sum, m| sum + m[:spend] }
+      year_earn = months.inject(0){|sum, m| sum + m[:earn] }
+      
+      erb :stats, :locals => {
+            :year => year,
+            :months => months,
+            :year_spend => year_spend,
+            :year_earn => year_earn,
+	          :prefix => PREFIX,
+            :active => "stats"
+          }
+    end
+
     get '/book' do
       book.reload_book
 
@@ -496,5 +514,5 @@ class MNTBooks < Sinatra::Base
       redirect PREFIX+"/todo"
     end
   end
-
+  
 end

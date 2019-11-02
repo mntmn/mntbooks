@@ -879,5 +879,42 @@ SQL
       register_invoice_document(invoice, pdf_path)
     end
   end
+
+  def get_stats_monthly(y)
+    year = y.to_i
+    months = []
+    db = @book_db
+    
+    (1..12).each do |m|
+      month = "%02d" % m
+      
+      spend_rows = db.execute <<-SQL
+      select sum(amount_cents)/100 as spend from book where debit_account like "assets:%" and credit_account not like "assets:%" and date like "#{year}-#{month}-%";
+      SQL
+      
+      earn_rows = db.execute <<-SQL
+      select sum(amount_cents)/100 as earn from book where credit_account like "assets:%" and debit_account not like "assets:%" and date like "#{year}-#{month}-%";
+      SQL
+
+      spend_accounts = db.execute <<-SQL
+      select sum(amount_cents)/100.0 as spend, credit_account from book where debit_account like "assets:%" and credit_account not like "assets:%" and date like "#{year}-#{month}-%" group by credit_account order by spend desc;
+      SQL
+
+      earn_accounts = db.execute <<-SQL
+      select sum(amount_cents)/100.0 as earn, debit_account from book where credit_account like "assets:%" and debit_account not like "assets:%" and date like "#{year}-#{month}-%" group by debit_account order by earn desc;
+      SQL
+
+      months.push({
+                    year:  year,
+                    month: month,
+                    spend: spend_rows[0]['spend']||0,
+                    earn:  earn_rows[0]['earn']||0,
+                    spend_accounts: spend_accounts,
+                    earn_accounts: earn_accounts,
+                  })
+    end
+
+    months
+  end
   
 end
