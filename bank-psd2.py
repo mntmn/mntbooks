@@ -33,7 +33,7 @@ def process_rows(rows, acc_id):
         # reconstruct old date format
         raw_date = str(dt).replace('-','')[2:]
         # reconstruct old details format
-        details = ' SVWZ+'+str(row.data.get("purpose"))+'\n'+str(row.data.get("additional_purpose"))+'\n'+str(row.data.get("end_to_end_reference"))+'\n'+str(row.data.get("applicant_iban"))+'\n'+str(row.data.get("applicant_name"))+'\n'+str(row.data.get("deviate_applicant"))
+        details = ' SVWZ+'+str(row.data.get("purpose"))+'\n'+str(row.data.get("additional_purpose"))+'\n'+str(row.data.get("end_to_end_reference"))+'\n'+str(row.data.get("applicant_bin"))+'\n'+str(row.data.get("applicant_iban"))+'\n'+str(row.data.get("applicant_name"))+'\n'+str(row.data.get("deviate_applicant"))
         txn_id = "v2:"+hashlib.md5((raw_date+str(amount_cents)+details).encode('utf-8')).hexdigest()
         # reconstruct old "source" entry
         source = raw_date+str(row.data.get("status"))+str(row.data.get("amount").amount*100).replace('.',',')+str(row.data.get("id"))
