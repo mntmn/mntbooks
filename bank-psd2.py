@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import logging
 import datetime
 import re
@@ -11,10 +13,10 @@ from fints.client import FinTS3PinTanClient, FinTSClientMode, FinTSUnsupportedOp
 from fints.hhd.flicker import terminal_flicker_unix
 import getpass
 
-acc_id = os.environ("BANK_ACC")
-pin = os.environ("BANK_PIN")
-bank_code = os.environ("BANK_CODE")
-fints_url = os.environ("BANK_FINTS_URL")
+acc_id = os.environ["BANK_ACC"]
+pin = os.environ["BANK_PIN"]
+bank_code = os.environ["BANK_CODE"]
+fints_url = os.environ["BANK_FINTS_URL"]
 
 #logging.basicConfig(level=logging.DEBUG)
 
