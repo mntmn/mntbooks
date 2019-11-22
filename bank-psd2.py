@@ -42,7 +42,7 @@ def process_rows(rows, acc_id):
                          str(row.data.get("applicant_name") or ''),
                          str(row.data.get("deviate_applicant") or '')]
         details = ' '.join(details_parts)
-        txn_id = "v2:"+hashlib.md5((raw_date+str(amount_cents)+details).encode('utf-8')).hexdigest()
+        txn_id = "v2"+hashlib.md5((raw_date+str(amount_cents)+details).encode('utf-8')).hexdigest()
         # reconstruct old "source" entry
         source = ''.join([raw_date,
                           str(row.data.get("status")),
