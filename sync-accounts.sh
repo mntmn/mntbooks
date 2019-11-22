@@ -5,6 +5,6 @@ export HOME=/home/mntbooks
 cd /home/mntbooks/mntbooks
 source ./secrets.sh
 
-ruby bank.rb
+python3 bank-psd2.py
 ruby paypal.rb
 
