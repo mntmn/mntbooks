@@ -28,15 +28,26 @@ def process_rows(rows, acc_id):
         print("input row: -------------------------\n")
         pprint.pprint(row.data)
         
-        dt = row.data.get("date")
         amount_cents = int(row.data.get("amount").amount*100)
         # reconstruct old date format
+        dt = row.data.get("date")
         raw_date = str(dt).replace('-','')[2:]
         # reconstruct old details format
-        details = ' SVWZ+'+str(row.data.get("purpose"))+'\n'+str(row.data.get("additional_purpose"))+'\n'+str(row.data.get("end_to_end_reference"))+'\n'+str(row.data.get("applicant_bin"))+'\n'+str(row.data.get("applicant_iban"))+'\n'+str(row.data.get("applicant_name"))+'\n'+str(row.data.get("deviate_applicant"))
+        details_parts = [' SVWZ+',
+                         str(row.data.get("purpose")),
+                         str(row.data.get("additional_purpose") or ''),
+                         str(row.data.get("end_to_end_reference") or ''),
+                         str(row.data.get("applicant_bin")),
+                         str(row.data.get("applicant_iban")),
+                         str(row.data.get("applicant_name") or ''),
+                         str(row.data.get("deviate_applicant") or '')]
+        details = ' '.join(details_parts)
         txn_id = "v2:"+hashlib.md5((raw_date+str(amount_cents)+details).encode('utf-8')).hexdigest()
         # reconstruct old "source" entry
-        source = raw_date+str(row.data.get("status"))+str(row.data.get("amount").amount*100).replace('.',',')+str(row.data.get("id"))
+        source = ''.join([raw_date,
+                          str(row.data.get("status")),
+                          str(row.data.get("amount").amount*100).replace('.',','),
+                          str(row.data.get("id"))])
         
         db_row = [
             txn_id,
