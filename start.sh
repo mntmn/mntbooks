@@ -5,5 +5,5 @@ export HOME=/home/mntbooks
 cd /home/mntbooks/mntbooks
 source ./secrets.sh
 
-ruby book.rb
+rackup -p 4567
 
