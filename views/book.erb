@@ -4,7 +4,6 @@
   </head>
   <body>
     <%= erb :menu, :locals => { :active => :book, :prefix => prefix } %>
-    <form action="/todo" method="POST">
       <table>
         <tr>
           <th>Date</th>
@@ -22,8 +21,8 @@
           <td class="date"><%= b[:date] %></td>
           <td class="amount"><%= b[:currency] %></td>
           <td class="amount"><%= '%.2f' % (b[:amount_cents]/100.0) %></td>
-          <td><%= b[:debit_account] %></td>
-          <td><%= b[:credit_account] %></td>
+          <td><input type="text" id="book-<%= b[:id] %>-debit" value="<%= b[:debit_account] %>"></td>
+          <td><input type="text" id="book-<%= b[:id] %>-credit" value="<%= b[:credit_account] %>"></td>
           
           <td class="details">
             <b title="<%= b[:raw] %>"><%= b[:fields][:trailer]||"Bank?" %></b><br>
@@ -44,7 +43,8 @@
             </ul>
           </td>
           <td>
-            <input type="text" value="<%= b[:comment] %>">
+            <input type="text" id="book-<%= b[:id] %>-comment" value="<%= b[:comment] %>">
+            <button onclick="saveBooking('<%= b[:id] %>')">Save</button>
           </td>
         </tr>
         <% end %>
@@ -60,6 +60,38 @@
         </tr>
         <% end %>
       </table>
-    </form>
+
+      <script>
+        function saveBooking(id) {
+          key = "book-"+id
+          
+          data = {
+            id: id,
+            debit_account:  document.getElementById(key+"-debit").value,
+            credit_account: document.getElementById(key+"-credit").value,
+            comment: document.getElementById(key+"-comment").value
+          }
+
+          console.log("saveBooking:", data)
+
+          var url = "book/"+id
+          var xhr = new XMLHttpRequest()
+          xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+              console.log(xhr.response)
+              try {
+                var obj = JSON.parse(xhr.response)
+                alert("Booking updated: "+obj.id)
+                //location.href="<%= prefix %>/invoices"
+              } catch (e) {
+                alert("Sorry, an error occured: "+xhr.response)
+              }
+            }
+          }
+          xhr.open("POST", url, true)
+          xhr.setRequestHeader("Content-type", "application/json")
+          xhr.send(JSON.stringify(data))
+        }
+      </script>
   </body>
 </html>

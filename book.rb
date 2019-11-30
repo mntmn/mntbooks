@@ -387,6 +387,14 @@ SQL
     end
   end
 
+  def update_booking(id, payload)
+    query = "update book set debit_account=?, credit_account=?, comment=? where id=?"
+    res = @book_db.execute(query, payload["debit_account"], payload["credit_account"], payload["comment"], id)
+
+    # FIXME
+    payload
+  end
+
   def reload_documents
     ##############################################################
     ### load all document rows into memory

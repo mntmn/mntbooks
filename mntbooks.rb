@@ -12,7 +12,6 @@ require 'sinatra/base'
 require 'sinatra/namespace'
 
 require './config.rb'
-
 require './book.rb'
 
 class MNTBooks < Sinatra::Base
@@ -317,10 +316,7 @@ class MNTBooks < Sinatra::Base
       debit_accounts = book.debit_accounts
       credit_accounts = book.credit_accounts
       
-      # FIXME: move to config
-      default_accounts = ["furniture","tools","consumables","packaging","computers","monitors","computers:input","computers:network","machines","parts:other","parts:reform","parts:va2000","parts:zz9000","sales:reform","sales:va2000","sales:zz9000","sales:services","sales:other","services:legal:taxadvisor","services:legal:notary","services:legal:ip","services:legal:lawyer","taxes:ust","taxes:gwst","taxes:kst","taxes:other","banking","shares","services:design","services:other","shipping","literature","capital-reserve"]
-      
-      accounts = (debit_accounts+credit_accounts+default_accounts).sort.uniq
+      accounts = (debit_accounts+credit_accounts+DEFAULT_ACCOUNTS).sort.uniq
       documents = book.get_all_documents.map(&:to_h).select do |d|
         d[:state]=="defer"
       end
@@ -467,6 +463,22 @@ class MNTBooks < Sinatra::Base
     get '/dist/:name' do
       file = File.join("dist", params[:name])
       send_file(file)
+    end
+
+    post '/book/:id' do
+      content_type 'application/json'
+      
+      id = params["id"]
+
+      book.reload_book
+      request.body.rewind
+      payload = JSON.parse(request.body.read)
+
+      pp payload
+
+      result = book.update_booking(id, payload)
+
+      result.to_h.to_json
     end
 
     post '/todo' do
