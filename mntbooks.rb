@@ -403,7 +403,7 @@ class MNTBooks < Sinatra::Base
         filter_null_account = (params["null_account"].to_i == 1)
       end
       
-      bookings=bookings.filter do |b|
+      bookings=bookings.select do |b|
         pass = true
         if filter_month
           date = Date.parse(b[:date])
