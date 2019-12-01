@@ -5,7 +5,9 @@
 
   <span>
   <% if active == :book %>
-  Booked
+  Booked: <a href="<%= prefix %>/book">All</a> | 
+  <a href="<%= prefix %>/book?year=2019">2019</a> | 
+  <a href="<%= prefix %>/book?null_account=1">No Account</a>
   <% else %>
   <a href="<%= prefix %>/book">Booked</a>
   <% end %>
