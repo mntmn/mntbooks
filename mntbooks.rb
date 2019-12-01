@@ -350,20 +350,26 @@ class MNTBooks < Sinatra::Base
     get '/' do
       redirect PREFIX+"/book"
     end
-
+    
     get '/stats' do
-
+      nf = Proc.new do |n|
+        "%0.3f" % (n/1000.0)
+      end
+      
       year = params[:year].to_i
-      months = book.get_stats_monthly(year)
+      months = book.get_stats_monthly(year, nf)
 
-      year_spend = months.inject(0){|sum, m| sum + m[:spend] }
-      year_earn = months.inject(0){|sum, m| sum + m[:earn] }
+      # FIXME work with decimal
+      year_spend = months.inject(0){|sum, m| sum + m[:spend].to_f }
+      year_earn = months.inject(0){|sum, m| sum + m[:earn].to_f }
+      year_profit = year_earn-year_spend
       
       erb :stats, :locals => {
             :year => year,
             :months => months,
-            :year_spend => year_spend,
-            :year_earn => year_earn,
+            :year_spend => nf.call(year_spend),
+            :year_earn => nf.call(year_earn),
+            :year_profit => nf.call(year_profit),
 	          :prefix => PREFIX,
             :active => "stats"
           }
@@ -372,16 +378,55 @@ class MNTBooks < Sinatra::Base
     get '/book' do
       book.reload_book
 
+      # autocomplete data
+      debit_accounts  = book.debit_accounts
+      credit_accounts = book.credit_accounts
+      accounts = (debit_accounts+credit_accounts+DEFAULT_ACCOUNTS).sort.uniq
+      documents = book.get_all_documents.map(&:to_h).select do |d|
+        d[:state]=="defer"
+      end
+      
       months={}
       bookings=book.book_rows.map(&method(:book_row_to_hash))
 
+      filter_year = nil
+      filter_month = nil
+      filter_null_account = false
+      
+      if params["year"]
+        filter_year = params["year"].to_i
+      end
+      if params["month"]
+        filter_month = params["month"].to_i
+      end
+      if params["null_account"]
+        filter_null_account = (params["null_account"].to_i == 1)
+      end
+      
+      bookings=bookings.filter do |b|
+        pass = true
+        if filter_month
+          date = Date.parse(b[:date])
+          pass = (date.month == filter_month)
+        end
+        if pass && filter_year
+          date = Date.parse(b[:date])
+          pass = (date.year == filter_year)
+        end
+        if pass && filter_null_account
+          pass = b[:credit_account].size < 1 || b[:debit_account].size<1
+        end
+        pass
+      end
+      
       bookings=bookings.map do |b|
         date = Date.parse(b[:date])
         month_key = "#{date.year}-#{date.month}"
         if !months[month_key]
           months[month_key]={
             :bookings => [],
-            :sum_cents => 0
+            :earn_cents => 0,
+            :spend_cents => 0
           }
         end
         months[month_key][:bookings].push(b)
@@ -389,9 +434,11 @@ class MNTBooks < Sinatra::Base
         # pseudo summing
         if b[:currency]=="EUR" # FIXME kludge
           if b[:debit_account].to_s.match("assets:") && !b[:credit_account].to_s.match("assets:")
-            months[month_key][:sum_cents]-=b[:amount_cents]
+            months[month_key][:spend_cents]+=b[:amount_cents]
+            b[:css_class] = "negative"
           elsif !b[:debit_account].to_s.match("assets:") && (b[:credit_account].to_s.match("assets:"))
-            months[month_key][:sum_cents]+=b[:amount_cents]
+            months[month_key][:earn_cents]+=b[:amount_cents]
+            b[:css_class] = "positive"
           end
         end
         
@@ -400,6 +447,8 @@ class MNTBooks < Sinatra::Base
       
       erb :book, :locals => {
             :months => months,
+            :accounts => accounts,
+            :documents => documents,
 	          :prefix => PREFIX
           }
     end
@@ -473,8 +522,6 @@ class MNTBooks < Sinatra::Base
       book.reload_book
       request.body.rewind
       payload = JSON.parse(request.body.read)
-
-      pp payload
 
       result = book.update_booking(id, payload)
 

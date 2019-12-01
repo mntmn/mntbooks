@@ -688,8 +688,6 @@ SQL
         :fields => fields
       }
 
-      pp obj
-
       return obj
     end
 
@@ -888,7 +886,7 @@ SQL
     end
   end
 
-  def get_stats_monthly(y)
+  def get_stats_monthly(y, number_formatter)
     year = y.to_i
     months = []
     db = @book_db
@@ -912,11 +910,15 @@ SQL
       select sum(amount_cents)/100.0 as earn, debit_account from book where credit_account like "assets:%" and debit_account not like "assets:%" and date like "#{year}-#{month}-%" group by debit_account order by earn desc;
       SQL
 
+      spend = spend_rows[0]['spend']||0
+      earn = earn_rows[0]['earn']||0
+
       months.push({
                     year:  year,
                     month: month,
-                    spend: spend_rows[0]['spend']||0,
-                    earn:  earn_rows[0]['earn']||0,
+                    spend: number_formatter.call(spend),
+                    earn:  number_formatter.call(earn),
+                    profit:  number_formatter.call(earn-spend),
                     spend_accounts: spend_accounts,
                     earn_accounts: earn_accounts,
                   })

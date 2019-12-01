@@ -8,13 +8,7 @@
       }
     </style>
   </head>
-  <%= erb :menu, :locals => { :active => :book, :prefix => prefix } %>
-
-  <%
-    def nf(n)
-      "%0.3f" % (n/1000.0)
-    end
-    %>
+  <%= erb :menu, :locals => { :active => :stats, :prefix => prefix } %>
 
   <p><small>Values are 1000s of EUR.</small></p>
   
@@ -31,7 +25,7 @@
         <th>Spend:</th>
         <% months.each do |m| %>
         <td>
-          <b><%= nf(m[:spend]) %></b><br>
+          <b><%= m[:spend] %></b><br>
           <table class="number-table">
             <% m[:spend_accounts].each do |sa| %>
             <tr>
@@ -42,20 +36,20 @@
                 <% end %>
               </td>
               <td>
-                <%= nf(sa['spend']) %>
+                <%= sa['spend'] %>
               </td>
             </tr>
             <% end %>
           </table>
         </td>
         <% end %>
-        <th><%= nf(year_spend) %></th>
+        <th><%= year_spend %></th>
       </tr>
       <tr>
         <th>Earnings:</th>
         <% months.each do |m| %>
         <td>
-          <b><%= nf(m[:earn]) %></b><br>
+          <b><%= m[:earn] %></b><br>
           
           <table class="number-table">
             <% m[:earn_accounts].each do |sa| %>
@@ -67,21 +61,21 @@
                 <% end %>
               </td>
               <td>
-                <%= nf(sa['earn']) %>
+                <%= sa['earn'] %>
               </td>
             </tr>
             <% end %>
           </table>
         </td>
         <% end %>
-        <th><%= nf(year_earn) %></th>
+        <th><%= year_earn %></th>
       </tr>
       <tr>
         <th>Profit/Loss:</th>
         <% months.each do |m| %>
-        <td class="amount <% if (m[:earn]-m[:spend])<0 %>negative<% else %>positive<% end %>"><b><%= nf(m[:earn]-m[:spend]) %></b></td>
+        <td class="amount <% if (m[:profit]).to_f<0 %>negative<% else %>positive<% end %>"><b><%= m[:profit] %></b></td>
         <% end %>
-        <th><%= nf(year_earn-year_spend) %></th>
+        <th><%= year_profit %></th>
       </tr>
     </table>
   </body>

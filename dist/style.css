@@ -32,10 +32,16 @@ input.receipt {
 
 input.comment {
     width: 400px;
+    border: none;
+    font-size: inherit;
+    line-height: inherit;
 }
 
 input.account {
     width: 300px;
+    border: none;
+    font-size: inherit;
+    line-height: inherit;
 }
 
 a {

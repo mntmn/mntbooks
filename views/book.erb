@@ -1,6 +1,7 @@
 <html>
   <head>
     <%= erb :style %>
+    <link rel="stylesheet" href="dist/auto-complete.css"></link>
   </head>
   <body>
     <%= erb :menu, :locals => { :active => :book, :prefix => prefix } %>
@@ -9,20 +10,18 @@
           <th>Date</th>
           <th>Cr</th>
           <th>Amt</th>
-          <th>Debit</th>
-          <th>Credit</th>
+          <th>Accounts (Debit, Credit)</th>
           <th class="details">Details</th>
           <th>Receipt</th>
           <th>Comment</th>
         </tr>
         <% months.keys.each do |mk| %>
         <% months[mk][:bookings].each do |b| %>
-        <tr class="<%= b[:css_class] %>" id="<%= b[:id] %>">
+        <tr id="<%= b[:id] %>">
           <td class="date"><%= b[:date] %></td>
           <td class="amount"><%= b[:currency] %></td>
-          <td class="amount"><%= '%.2f' % (b[:amount_cents]/100.0) %></td>
-          <td><input type="text" id="book-<%= b[:id] %>-debit" value="<%= b[:debit_account] %>"></td>
-          <td><input type="text" id="book-<%= b[:id] %>-credit" value="<%= b[:credit_account] %>"></td>
+          <td class="amount <%= b[:css_class] %>"><%= '%.2f' % (b[:amount_cents]/100.0) %></td>
+          <td><input type="text" id="book-<%= b[:id] %>-debit" value="<%= b[:debit_account] %>" class="account" onchange="saveBooking('<%= b[:id] %>')"><br><input type="text" id="book-<%= b[:id] %>-credit" value="<%= b[:credit_account] %>" class="account" onchange="saveBooking('<%= b[:id] %>')"></td>
           
           <td class="details">
             <b title="<%= b[:raw] %>"><%= b[:fields][:trailer]||"Bank?" %></b><br>
@@ -43,15 +42,19 @@
             </ul>
           </td>
           <td>
-            <input type="text" id="book-<%= b[:id] %>-comment" value="<%= b[:comment] %>">
+            <input type="text" id="book-<%= b[:id] %>-comment" class="comment" value="<%= b[:comment] %>">
             <button onclick="saveBooking('<%= b[:id] %>')">Save</button>
           </td>
         </tr>
         <% end %>
         <tr class="month-row">
-          <td class="date"></td>
+          <td class="date"><%= mk %> Result</td>
           <td></td>
-          <td class="amount"><%= '%.2f' % (months[mk][:sum_cents]/100.0) %></td>
+          <td class="amount">
+            &nbsp;<%= '%.2f' % (months[mk][:earn_cents]/100.0) %><br>
+            -&nbsp;<%= '%.2f' % (months[mk][:spend_cents]/100.0) %><br>
+            =&nbsp;<%= '%.2f' % ((months[mk][:earn_cents]-months[mk][:spend_cents])/100.0) %>
+          </td>
           <td></td>
           <td></td>
           <td></td>
@@ -61,6 +64,14 @@
         <% end %>
       </table>
 
+      <script src="dist/auto-complete.min.js"></script>
+      <script src="dist/book.js"></script>
+
+      <script>
+        ACCOUNTS  = <%= accounts.to_json %>
+        DOCUMENTS = <%= documents.to_json %>
+      </script>
+      
       <script>
         function saveBooking(id) {
           key = "book-"+id
@@ -81,8 +92,9 @@
               console.log(xhr.response)
               try {
                 var obj = JSON.parse(xhr.response)
-                alert("Booking updated: "+obj.id)
-                //location.href="<%= prefix %>/invoices"
+                new Noty({
+                  text: "Booking updated: "+obj.id
+                }).show()
               } catch (e) {
                 alert("Sorry, an error occured: "+xhr.response)
               }
