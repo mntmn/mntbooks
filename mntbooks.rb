@@ -414,7 +414,7 @@ class MNTBooks < Sinatra::Base
           pass = (date.year == filter_year)
         end
         if pass && filter_null_account
-          pass = b[:credit_account].size < 1 || b[:debit_account].size<1
+          pass = b[:credit_account].nil? || b[:credit_account].size < 1 || b[:debit_account].nil? || b[:debit_account].size<1
         end
         pass
       end
