@@ -594,6 +594,7 @@ SQL
 
       if !booked_documents.include?(row[:path]) && row[:sum].to_f>0
         account = "unbooked"
+        # FIXME: a copy of outgoing invoices ends up as unbooked, cluttering the unbooked folder
         
         if !row[:tags].nil?
           tags = row[:tags].split(",").sort
@@ -632,16 +633,19 @@ SQL
           csv_quarters[subdir] = []
         end
 
-        csv_quarters[subdir].push([
-                                    date,
-                                    currency,
-                                    amount,
-                                    account,
-                                    row[:docid],
-                                    "#{subdir_category}/#{fname}",
-                                    tags.join(" "),
-                                    row[:invoice_id]
-                                  ])
+        # "unbooked" docs are useless in the mapping table
+        if (account!="unbooked")
+          csv_quarters[subdir].push([
+                                      date,
+                                      currency,
+                                      amount,
+                                      account,
+                                      row[:docid],
+                                      "#{subdir_category}/#{fname}",
+                                      tags.join(" "),
+                                      row[:invoice_id]
+                                    ])
+        end
       end
     end
 
