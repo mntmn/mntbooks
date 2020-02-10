@@ -155,7 +155,8 @@ class MNTBooks < Sinatra::Base
 
       months={}
       
-      invoices=book.invoice_rows
+      invoices=book.invoice_rows.sort_by {|i| i[:invoice_date]}
+      invoices.reverse!
       
       invoices=invoices.map do |i|
         i[:receipt_urls] = []
