@@ -22,6 +22,7 @@
       
       <div id="meta">
         <span>Invoice ID:</span> <input type="text" id="iid" placeholder="automatic"><br>
+        <span>Replaces ID:</span> <input type="text" id="replaces_id" onchange="recalc()"><br>
         <span>Date:</span> <input type="text" id="idate" value="<%= invoice_date %>" onchange="recalc()"><br>
         <span>Order ID:</span> <input type="text" id="ordernum" onchange="recalc()"><br>
         <select id="payment-method" onchange="recalc()">
@@ -123,6 +124,7 @@
           customer_state: document.getElementById("state").value,
           customer_country: document.getElementById("country").value,
           order_id: document.getElementById("ordernum").value,
+          replaces_id: document.getElementById("replaces_id").value,
           line_items: JSON.stringify(items),
           vat_included: ""+!!inclVAT,
           tax_code: taxCode
@@ -150,6 +152,8 @@
       }
 
       function finalize() {
+        recalc()
+        
         var url = "../invoices"
         var xhr = new XMLHttpRequest()
         xhr.onreadystatechange = function() {

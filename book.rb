@@ -115,6 +115,8 @@ class Book
         customer_state text,
         customer_country text,
         vat_included int,
+        replaces_id varchar(64),
+        replaced_by_id varchar(64),
         created_at varchar(32),
         updated_at varchar(32)
       );
@@ -156,10 +158,10 @@ class Book
   end
   
   def create_invoice(invoice)
-    new_row = [invoice[:id],invoice[:invoice_date],invoice[:amount_cents],invoice[:details],invoice[:currency],invoice[:tax_code],invoice[:customer_account],invoice[:sales_account],invoice[:order_id],invoice[:line_items],invoice[:payment_method],invoice[:customer_company],invoice[:customer_name],invoice[:customer_address_1],invoice[:customer_address_2],invoice[:customer_zip],invoice[:customer_city],invoice[:customer_state],invoice[:customer_country],invoice[:vat_included]]
+    new_row = [invoice[:id],invoice[:invoice_date],invoice[:amount_cents],invoice[:details],invoice[:currency],invoice[:tax_code],invoice[:customer_account],invoice[:sales_account],invoice[:order_id],invoice[:line_items],invoice[:payment_method],invoice[:customer_company],invoice[:customer_name],invoice[:customer_address_1],invoice[:customer_address_2],invoice[:customer_zip],invoice[:customer_city],invoice[:customer_state],invoice[:customer_country],invoice[:vat_included],invoice[:replaces_id],invoice[:replaced_by_id]]
     
-    @book_db.execute("insert into invoices (id, invoice_date, amount_cents, details, currency, tax_code, customer_account, sales_account, order_id, line_items, payment_method, customer_company, customer_name, customer_address_1, customer_address_2, customer_zip, customer_city, customer_state, customer_country, vat_included) 
-            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", new_row)
+    @book_db.execute("insert into invoices (id, invoice_date, amount_cents, details, currency, tax_code, customer_account, sales_account, order_id, line_items, payment_method, customer_company, customer_name, customer_address_1, customer_address_2, customer_zip, customer_city, customer_state, customer_country, vat_included, replaces_id, replaced_by_id) 
+            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", new_row)
   end
 
   def register_invoice_document(invoice, document_path)
@@ -442,7 +444,6 @@ SQL
   end
   
   def update_document_metadata(pdfname, docid, date, sum, tags)
-    puts "update metadata:",[docid,date,sum,tags,pdfname]
     @book_db.execute("update documents set docid=?,date=?,sum=?,tags=? where path=?",[docid,date,sum,tags,pdfname])
   end
 
@@ -664,7 +665,6 @@ SQL
       end
     end
     
-
     quarters.keys
   end
 
@@ -823,26 +823,7 @@ SQL
   end
 
   def render_invoice_html(invoice)
-    if invoice[:line_items][0] == '['
-      invoice[:line_items] = JSON.parse(invoice[:line_items])
-    else
-      # legacy format
-      # FIXME move this to invoice importer
-      ils = []
-      ils_raw = invoice[:line_items].split("$")
-      ils_raw.each do |il|
-        il_raw = il.split("|")
-        ils.push({
-                   "title" => il_raw[0],
-                   "quantity" => il_raw[1],
-                   "price_cents" => il_raw[2].to_f*100.0,
-                   "description" => il_raw[3],
-                   "amount_cents" => il_raw[1].to_f*il_raw[2].to_f*100.0,
-                   "sku" => ""
-                 })
-      end
-      invoice[:line_items] = ils
-    end
+    invoice[:line_items] = JSON.parse(invoice[:line_items])
 
     total = invoice[:amount_cents]/100.0
     tax_rate = TAX_RATES[invoice[:tax_code]] || 0
@@ -853,6 +834,7 @@ SQL
     invoice[:total] = '%.2f' % total
 
     # FIXME take these strings from config/locale
+    # FIXME actually these should come from the template
     outro = ""
     if tax_rate == 0
       outro = "Steuerfreie Ausfuhrlieferungen nach § 4 Nr. 1a UStG in Verbindung mit § 6 UStG."

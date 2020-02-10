@@ -4,7 +4,9 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>Rechnung</title>
     <style type="text/css">
-      @import url('https://rsms.me/inter/inter.css');
+      /* the font has to be installed on the machine locally for the pdf process
+         to render a pdf with real text instead of an image */
+      /*@import url('https://rsms.me/inter/inter.css');*/
       
       body {
           font-family: "Inter";
@@ -180,6 +182,7 @@
       <div id="meta">
         <b>Rechnungsnummer: <%= invoice[:id] %></b><br>
         Rechnungsdatum: <%= invoice[:invoice_date] %><br>
+        <% if (!invoice[:replaces_id].nil? && invoice[:replaces_id].size>0) %><b>Ersetzt Rechnung: <%= invoice[:replaces_id] %></b><% end %><br>
         <% if (!invoice[:order_id].nil? && invoice[:order_id].size>0) %>Bestellnummer: <%= invoice[:order_id] %><% end %><br>
         <br>
         Leistungsdatum entspricht Rechnungsdatum
@@ -194,7 +197,11 @@
     
     <div id="intro">
       <div id="intro-space"></div>
+      <% if (!invoice[:replaces_id].nil? && invoice[:replaces_id].size>0) %>
+      <h2>Korrekturrechnung</h2>
+      <% else %>
       <h2>Rechnung</h2>
+      <% end %>
     </div>
     
     <table>
