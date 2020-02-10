@@ -163,7 +163,7 @@ class MNTBooks < Sinatra::Base
         i[:receipt_urls].push(PREFIX+"/invoices/#{i.id}?pdf=1")
 
         date = Date.parse(i[:invoice_date])
-        month_key = "#{date.year}-#{date.month}"
+        month_key = "#{date.year}-#{date.month.to_s.rjust(2,'0')}"
         if !months[month_key]
           months[month_key]={
             :invoices => [],

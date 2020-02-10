@@ -15,7 +15,7 @@
           <th class="details">Name</th>
           <th>Receipt</th>
         </tr>
-        <% months.keys.each do |mk| %>
+        <% months.keys.sort.reverse.each do |mk| %>
         <% months[mk][:invoices].each do |b| %>
         <tr>
           <td class="date"><%= b[:invoice_date] %></td>
