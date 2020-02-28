@@ -13,14 +13,14 @@
       <% boms.each do |b| %>
       <tr>
         <td><%= b[:id] %></td>
-        <td><a href="/boms/<%= b[:id] %>"><%= b[:name] %></a></td>
+        <td><a href="<%= prefix %>/boms/<%= b[:id] %>"><%= b[:name] %></a></td>
       </tr>
       <% end %>
     </table>
 
     <h3>Add / Edit BOM</h3>
 
-    <form method="POST" action="boms">
+    <form method="POST" action="<%= prefix %>/boms">
       <div class="form-group">
         <label class="form-label">ID</label>
         <input class="form-input" type="text" name="id">
