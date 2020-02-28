@@ -53,6 +53,7 @@
 
         <th>Pkg</th>
         
+        <th>Last Count</th>
         <th>Stock</th>
         <th>Loc</th>
         <th></th>
@@ -78,6 +79,7 @@
         
         <td><%= p[:package] %></td>
         
+        <td><%= fmt.format_datetime(p[:counted_at]) %></td>
         <td><%= p[:stock_qty] %></td>
         <td><%= p[:location] %></td>
         <td><% if !p[:datasheet_url].nil? %><a target="_blank" href="<%= p[:datasheet_url] %>">🗎</a><% end %></td>

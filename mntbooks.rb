@@ -596,6 +596,11 @@ class MNTBooks < Sinatra::Base
         
         "#{val.round(2)}#{chrs[i]}#{unit}"
       end
+
+      def format_datetime(val)
+        return "" if val.nil?
+        val.sub("T"," ")[0..15]
+      end
     end
     
     get '/parts' do
@@ -634,8 +639,13 @@ class MNTBooks < Sinatra::Base
       part_id=params[:id].to_i
 
       if part_id>0
+        if !params["stock_qty"].nil? && params["stock_qty"].size>0
+          data[:counted_at] = current_iso_date_time
+        end
+        data[:updated_at] = current_iso_date_time
         parts.where(:id => part_id).update(data)
       else
+        data[:created_at] = current_iso_date_time
         part_id = parts.insert(data)
       end
       
@@ -695,7 +705,9 @@ class MNTBooks < Sinatra::Base
         
         data = {
           :part_number => words[0],
-          :stock_qty => words[1].to_i
+          :stock_qty => words[1].to_i,
+          :counted_at => current_iso_date_time,
+          :updated_at => current_iso_date_time
         }
 
         existing_parts = parts.where(:part_number => words[0])
@@ -703,6 +715,7 @@ class MNTBooks < Sinatra::Base
           part_id = existing_parts.first[:id]
           parts.where(:id => part_id).update(data)
         else
+          data[:created_at] = current_iso_date_time
           part_id = parts.insert(data)
         end
       end

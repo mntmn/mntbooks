@@ -54,10 +54,10 @@ class Parts
         String :image_url
         String :mouser_url
         Integer :mouser_stock_qty
-        Integer :created_at
-        Integer :updated_at
-        Integer :counted_at
-        Integer :mouser_updated_at
+        String :created_at
+        String :updated_at
+        String :counted_at
+        String :mouser_updated_at
       end
       
       @DB.create_table :bom_items do
@@ -70,16 +70,16 @@ class Parts
         String :references
         String :value
         String :footprint
-        Integer :created_at
-        Integer :updated_at
+        String :created_at
+        String :updated_at
       end
 
       @DB.create_table :boms do
         primary_key :id
         String :name
         Integer :result_part_id
-        Integer :created_at
-        Integer :updated_at
+        String :created_at
+        String :updated_at
       end
     end
 
