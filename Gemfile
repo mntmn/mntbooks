@@ -10,4 +10,5 @@ gem "pdfkit"
 gem "sinatra-namespace"
 gem "zip"
 gem "rack"
+gem "http"
 
