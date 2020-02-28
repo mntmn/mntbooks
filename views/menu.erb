@@ -60,4 +60,20 @@
   <a href="<%= prefix %>/export">Export</a>
   <% end %>
   </span>
+  
+  <span>
+  <% if active == :parts %>
+  <a href="<%= prefix %>/parts"><b>Parts</b></a>
+  <% else %>
+  <a href="<%= prefix %>/parts">Parts</a>
+  <% end %>
+  </span>
+  
+  <span>
+  <% if active == :boms %>
+  <a href="<%= prefix %>/boms"><b>BOMs</b></a>
+  <% else %>
+  <a href="<%= prefix %>/boms">BOMs</a>
+  <% end %>
+  </span>
 </nav>

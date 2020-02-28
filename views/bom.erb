@@ -1,0 +1,144 @@
+<html>
+  <head>
+    <%= erb :style %>
+    <link rel="stylesheet" href="../dist/auto-complete.css"></link>
+  </head>
+  <body>
+    <%= erb :menu, :locals => { :active => :boms, :prefix => prefix } %>
+
+    <h2><%= bom[:name] %></h2>
+    
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>References</th>
+        <th>Value</th>
+        <th>Footprint</th>
+        <th>Manufacturer</th>
+        <th>Part No</th>
+        <th>Qty Req</th>
+        <th>In Stock</th>
+        <th>To Buy (x<%= builds %>)</th>
+      </tr>
+      <%
+        buildable_units = 0 
+        unmatched_parts = 0
+        lowest_buildable_count = 10000
+        to_buy = 0
+      %>
+      <% bom_items.each do |i| %>
+      <tr>
+        <td><%= i[:id] %></td>
+        <td style="width:200px;"><%= i[:references] %></td>
+        <td><%= i[:value] %></td>
+        <td><%= i[:footprint] %></td>
+        <td><%= i[:manufacturer] %></td>
+        <td><%= i[:part_number] %></td>
+        <td><%= i[:qty] %></td>
+        <td>
+          <% if matching_parts[i[:id]].nil? %>
+            &mdash;
+            <% unmatched_parts += 1 %>
+          <% else %>
+            <a href="../parts-find?part_number=<%= matching_parts[i[:id]][:part_number] %>">
+              🧱
+              <%= matching_parts[i[:id]][:stock_qty] %>
+
+              <%
+                buildable = matching_parts[i[:id]][:stock_qty]/i[:qty] 
+                if lowest_buildable_count > buildable
+                  lowest_buildable_count = buildable
+                end
+              %>
+            </a>
+          <% end %>
+        </td>
+        <td>
+          <% if matching_parts[i[:id]].nil? %>
+            <%= i[:qty]*builds %>
+          <% else %>
+            <%
+              buy = [i[:qty]*builds - matching_parts[i[:id]][:stock_qty], 0].max
+              to_buy += 1
+            %>
+            <%= buy %>
+          <% end %>
+        </td>
+      </tr>
+      <% end %>
+      <tr>
+        <td colspan="6"></td>
+        <td>
+          <%= bom_items.sum(:qty) %> Total<br>
+          <%= bom_items.count %> Unique<br>
+        </td>
+        <td>
+          <%= unmatched_parts %> Unknown Parts<br>
+          <%= lowest_buildable_count %> Buildable Units<br>
+        </td>
+        <td>
+          <%= to_buy %> Unique To Buy
+        </td>
+      </tr>
+    </table>
+    
+    <h3>Add / Edit BOM Item</h3>
+
+    <form method="POST" action="../boms/<%= bom_id %>/items">
+      <div class="form-group">
+        <label class="form-label">ID</label>
+        <input class="form-input" type="text" name="id">
+        
+        <label class="form-label">Quantity</label>
+        <input class="form-input" type="text" name="qty">
+        
+        <label class="form-label">References</label>
+        <input class="form-input" type="text" name="references">
+        
+        <label class="form-label">Value</label>
+        <input class="form-input" type="text" name="value">
+        
+        <label class="form-label">Footprint</label>
+        <input class="form-input" type="text" name="footprint">
+        
+        <label class="form-label">Manufacturer</label>
+        <input class="form-input" type="text" name="manufacturer">
+        
+        <label class="form-label">Part Number</label>
+        <input class="form-input" type="text" name="part_number">
+      </div>
+      <div class="form-group">
+        <input type="submit" name="save" value="Save">
+      </div>
+    </form>
+    
+    <h3>CSV Import</h3>
+    
+    <div>
+      <form method="POST" action="<%= bom_id %>/bulk">
+        <div class="form-group">
+          <label class="form-label">CSV</label>
+          <textarea class="form-input" name="csv" cols="80" rows="20"></textarea>
+        </div>
+        <div class="form-group">
+          <input type="submit" name="save" value="Save">
+        </div>
+      </form>
+    </div>
+    
+    <h3>Calculate Builds</h3>
+
+    <div>
+      <form method="GET" action="<%= bom_id %>">
+        <div class="form-group">
+          <label class="form-label">Builds</label>
+          <input type="number" name="builds">
+        </div>
+        <div class="form-group">
+          <input type="submit" name="calculate" value="Calculate">
+        </div>
+      </form>
+    </div>
+    
+  </body>
+</html>

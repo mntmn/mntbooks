@@ -13,6 +13,7 @@ require 'sinatra/namespace'
 
 require './config.rb'
 require './book.rb'
+require './parts.rb'
 
 class MNTBooks < Sinatra::Base
   register Sinatra::Namespace
@@ -26,6 +27,7 @@ class MNTBooks < Sinatra::Base
   def initialize
     super
     @book = Book.new
+    @parts = Parts.new
   end
 
   def book
@@ -573,6 +575,244 @@ class MNTBooks < Sinatra::Base
       end
       redirect PREFIX+"/todo"
     end
+
+    class PartsHelper
+      def format_val(val,unit)
+        return "" if val.nil?
+
+        chrs = ['G','M','K','','m','µ','n','p']
+        i = 3
+        while (val>999 && i>0)
+          val/=1000.0
+          i -= 1
+        end
+
+        if (i==3)
+          while (val<0.1 && i<chrs.size-1)
+            val*=1000.0
+            i += 1
+          end
+        end
+        
+        "#{val.round(2)}#{chrs[i]}#{unit}"
+      end
+    end
+    
+    get '/parts' do
+      parts = @parts.get_parts.order(:category,:manufacturer,:part_number).all
+      
+      erb :parts, :locals => {
+            :fmt => PartsHelper.new,
+            :parts => parts,
+            :edit_id => nil,
+            :part => {},
+            :highlight => params[:highlight].to_i,
+            :prefix => PREFIX,
+            :notification => params[:notification]
+          }
+    end
+
+    post '/parts-delete' do
+      parts = @parts.get_parts
+
+      part = parts.where(:id => params[:id]).first
+      
+      parts.where(:id => part[:id]).delete
+
+      redirect PREFIX+"/parts?notification=Part #{part[:part_number]} deleted."
+    end
+    
+    post '/parts' do
+      parts = @parts.get_parts
+
+      data = {}
+      params.keys.each do |k|
+        if params[k].size>0 && k!="save"
+          data[k] = params[k]
+        end
+      end
+      part_id=params[:id].to_i
+
+      if part_id>0
+        parts.where(:id => part_id).update(data)
+      else
+        part_id = parts.insert(data)
+      end
+      
+      redirect PREFIX+"/parts?highlight=#{part_id}##{part_id}"
+    end
+    
+    get '/parts-find' do
+      parts = @parts.get_parts
+
+      parts = parts.where(:part_number => params[:part_number]).order(:category,:manufacturer,:part_number).all
+
+      found_part = parts.first || {}
+
+      # prepare new part form
+      if parts.size<1
+        found_part = {
+          part_number: params[:part_number]
+        }
+      end
+      
+      erb :parts, :locals => {
+            :fmt => PartsHelper.new,
+            :parts => parts,
+            :prefix => PREFIX,
+            :edit_id => found_part[:id],
+            :highlight => found_part[:id],
+            :part => found_part,
+            :notification => nil
+          }
+    end
+    
+    post '/parts-bulk' do
+      parts = @parts.get_parts
+
+      bulk = params[:bulk]
+
+      part_id = 0
+      i = 0
+      bulk.lines.each do |line|
+        line = line.chomp
+        puts "#{i}: [#{line}]"
+        words = line.split(/\s+/)
+        puts "#{i}: [#{words.join(',')}]"
+        i += 1
+
+        words = words.map do |w|
+          if w.size<1
+            nil
+          else
+            w
+          end
+        end.flatten
+
+        words = words.map do |w|
+          w.gsub('"','')
+        end
+        
+        data = {
+          :part_number => words[0],
+          :stock_qty => words[1].to_i
+        }
+
+        existing_parts = parts.where(:part_number => words[0])
+        if existing_parts.count > 0
+          part_id = existing_parts.first[:id]
+          parts.where(:id => part_id).update(data)
+        else
+          part_id = parts.insert(data)
+        end
+      end
+
+      redirect PREFIX+"/parts?added=#{part_id}"
+    end
+    
+    get '/parts-populate' do
+      @parts.populate_parts_from_mouser(ENV["MOUSER_API_KEY"])
+      
+      redirect PREFIX+"/parts"
+    end
+
+    get '/boms' do
+      boms = @parts.get_boms.all
+
+      erb :boms, :locals => {
+            :boms => boms,
+            :prefix => PREFIX
+          }
+    end
+    
+    post '/boms' do
+      boms = @parts.get_boms
+
+      data = {
+        :name => params["name"]
+      }
+      
+      id = boms.insert(data)
+      redirect PREFIX+"/boms?added=#{id}"
+    end
+    
+    get '/boms/:id' do
+      bom = @parts.get_boms.where(:id => params[:id]).first
+      items = @parts.get_bom_items.where(:bom_id => params[:id]).order(:references, :value)
+
+      matching_parts = {}
+
+      items.each do |item|
+        parts = @parts.get_parts.where(:part_number => item[:part_number]).all
+        
+        if parts.size>0
+          matching_parts[item[:id]] = parts.first
+        end
+      end
+
+      calculate_builds = 1
+      calculate_builds = params[:builds].to_i if params[:builds]
+
+      erb :bom, :locals => {
+            :bom => bom,
+            :bom_id => bom[:id],
+            :bom_items => items,
+            :matching_parts => matching_parts,
+            :builds => calculate_builds,
+            :prefix => PREFIX
+          }
+    end
+    
+    post '/boms/:bom_id/items' do
+      bom = @parts.get_boms.where(:id => params[:bom_id]).first
+      bom_items = @parts.get_bom_items
+
+      data = {
+        :bom_id => bom[:id],
+        :qty => params["qty"],
+        :references => params["references"],
+        :manufacturer => params["manufacturer"],
+        :part_number => params["part_number"],
+        :value => params["value"],
+        :footprint => params["footprint"]
+      }
+
+      # TODO: auto-match part
+      
+      existing = bom_items.where(:id => params[:id])
+      if existing.count > 0
+        bom_items.where(:id => params[:id]).update(data)
+      else
+        bom_items.insert(data)
+      end
+      
+      redirect PREFIX+"/boms/#{bom[:id]}"
+    end
+    
+    post '/boms/:bom_id/bulk' do
+      bom = @parts.get_boms.where(:id => params[:bom_id]).first
+      bom_items = @parts.get_bom_items
+
+      table = CSV.parse(params[:csv], headers: true)
+
+      table.each do |row|
+        data = {
+          :bom_id => bom[:id],
+          :qty => row['Quantity'] || row['qty'],
+          :value => row['Value'] || row['value'],
+          :references => row['Reference'] || row['references'],
+          :manufacturer => row['Manufacturer'] || row['manufacturer'],
+          :footprint => row['Footprint'] || row['footprint'],
+          :part_number => row['Manufacturer_No'] || row['part_number']
+        }
+        if !data[references].nil? && data[references].size>0
+          bom_items.insert(data)
+        end
+      end
+      
+      redirect PREFIX+"/boms/#{bom[:id]}"
+    end
+    
   end
   
 end

@@ -1,0 +1,36 @@
+<html>
+  <head>
+    <%= erb :style %>
+    <link rel="stylesheet" href="dist/auto-complete.css"></link>
+  </head>
+  <body>
+    <%= erb :menu, :locals => { :active => :boms, :prefix => prefix } %>
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+      </tr>
+      <% boms.each do |b| %>
+      <tr>
+        <td><%= b[:id] %></td>
+        <td><a href="/boms/<%= b[:id] %>"><%= b[:name] %></a></td>
+      </tr>
+      <% end %>
+    </table>
+
+    <h3>Add / Edit BOM</h3>
+
+    <form method="POST" action="boms">
+      <div class="form-group">
+        <label class="form-label">ID</label>
+        <input class="form-input" type="text" name="id">
+        
+        <label class="form-label">Name</label>
+        <input class="form-input" type="text" name="name">
+      </div>
+      <div class="form-group">
+        <input type="submit" name="save" value="Save">
+      </div>
+    </form>
+  </body>
+</html>

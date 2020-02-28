@@ -95,6 +95,10 @@ tr.month-row td {
     font-weight: bold;
 }
 
+tr.highlight {
+    background-color: #c0ffff;
+}
+
 .form-group {
     margin-bottom: 1em;
 }

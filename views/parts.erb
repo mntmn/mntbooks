@@ -1,0 +1,163 @@
+<html>
+  <head>
+    <%= erb :style %>
+    <link rel="stylesheet" href="dist/auto-complete.css"></link>
+    <style>
+      .parts-table img {
+        height: 32px;
+      }
+    </style>
+    <script src="https://unpkg.com/hotkeys-js/dist/hotkeys.min.js"></script>
+    <script type="text/javascript">
+      hotkeys('esc', function (event, handler) {
+        switch (handler.key) {
+          case 'esc':
+            location.pathname='parts'
+          break
+        }
+      })
+    </script>
+  </head>
+  <body>
+    <%= erb :menu, :locals => { :active => :parts, :prefix => prefix } %>
+    
+    <h3>Find</h3>
+
+    <form method="POST" action="parts-find">
+      <div class="form-group">
+        <label class="form-label">Part No</label>
+        <input class="form-input" type="text" name="part_number" <% if !edit_id %>autofocus<% end %>>
+      </div>
+      <div class="form-group">
+        <input type="submit" name="find" value="Find">
+      </div>
+    </form>
+    
+    <h3>Inventory</h3>
+    
+    <table class="parts-table">
+      <tr>
+        <th>ID</th>
+        <th>Type</th>
+        <th>Manufacturer</th>
+        <th></th>
+        <th>Part No</th>
+        
+        <th>F</th>
+        <th>V</th>
+        <th>Ω</th>
+        <th>H</th>
+        <th>Tol</th>
+        <th>I</th>
+        <th>Hz</th>
+
+        <th>Pkg</th>
+        
+        <th>Stock</th>
+        <th>Loc</th>
+        <th></th>
+        <th></th>
+        <th>Mouser Qty</th>
+      </tr>
+      <% parts.each do |p| %>
+      <tr <% if highlight==p[:id] %>class="highlight"<% end %>>
+        <td><%= p[:id] %></td>
+        <td><%= p[:category] %></td>
+        
+        <td><%= p[:manufacturer] %></td>
+        <td><% if !p[:image_url].nil? %><img src="<%= p[:image_url] %>"><% end %></td>
+        <td><a href="parts-find?part_number=<%= p[:part_number] %>"><%= p[:part_number] %></a></td>
+        
+        <td><%= fmt.format_val(p[:capacitance],'F') %></td>
+        <td><%= fmt.format_val(p[:voltage],'V') %></td>
+        <td><%= fmt.format_val(p[:resistance],'Ω') %></td>
+        <td><%= fmt.format_val(p[:inductance],'H') %></td>
+        <td><%= p[:tolerance] %></td>
+        <td><%= fmt.format_val(p[:current],'A') %></td>
+        <td><%= fmt.format_val(p[:frequency],'Hz') %></td>
+        
+        <td><%= p[:package] %></td>
+        
+        <td><%= p[:stock_qty] %></td>
+        <td><%= p[:location] %></td>
+        <td><% if !p[:datasheet_url].nil? %><a target="_blank" href="<%= p[:datasheet_url] %>">🗎</a><% end %></td>
+        <td><% if !p[:mouser_url].nil? %><a target="_blank" href="<%= p[:mouser_url] %>">🔍</a><% end %></td>
+        <td><%= p[:mouser_stock_qty] %></td>
+      </tr>
+      <% end %>
+    </table>
+    
+    <h3>Add / Edit Part</h3>
+
+    <form method="POST" action="parts">
+      <div class="form-group">
+        <label class="form-label">ID</label>
+        <input class="form-input" type="text" name="id" value="<%= edit_id %>">
+        
+        <label class="form-label">Manufacturer</label>
+        <input class="form-input" type="text" name="manufacturer">
+
+        <label class="form-label">Part No</label>
+        <input class="form-input" type="text" name="part_number" value="<%= part[:part_number] %>">
+
+        <label class="form-label">Stock Qty</label>
+        <input class="form-input" type="text" name="stock_qty" value="<%= part[:stock_qty] %>" <% if edit_id %>autofocus<% end %>>
+
+        <label class="form-label">Location</label>
+        <input class="form-input" type="text" name="location" value="<%= part[:location] %>">
+        
+        <label class="form-label">Type</label>
+        <input class="form-input" type="text" name="category">
+
+        <label class="form-label">Description</label>
+        <input class="form-input" type="text" name="description">
+      </div>
+      <div class="form-group">
+        <input type="submit" name="save" value="Save">
+      </div>
+    </form>
+    
+    <h3>Tools</h3>
+
+    <div>
+      <a href="<%= PREFIX %>/parts-populate">Populate Mouser Data</a>
+    </div>
+
+    <h3>Bulk Add</h3>
+
+    <div>
+      <form method="POST" action="parts-bulk">
+        <div class="form-group">
+          <label class="form-label">Bulk Add</label>
+          <textarea class="form-input" name="bulk" cols="40" rows="10"></textarea>
+        </div>
+        <div class="form-group">
+          <input type="submit" name="save" value="Save">
+        </div>
+      </form>
+    </div>
+    
+    <h3>Delete Part</h3>
+    
+    <div>
+      <form method="POST" action="parts-delete">
+        <div class="form-group">
+          <label class="form-label">Part ID</label>
+          <input type="text" name="id">
+        </div>
+        <div class="form-group">
+          <input type="submit" name="delete" value="Delete">
+        </div>
+      </form>
+    </div>
+
+    <% if notification %>
+    <script>
+      new Noty({
+      text: "<%= notification %>"
+      }).show()
+    </script>
+    <% end %>
+
+  </body>
+</html>
