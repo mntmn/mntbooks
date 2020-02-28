@@ -2,7 +2,6 @@
 
 mntbooks is a bookkeeping system developed for internal use at MNT Research GmbH.
 The code is currently in garbage/sketch state. Most of it is written in Ruby using the Sinatra library for web requests. The database is sqlite3.
-invoiserv.js is the legacy node.js-based invoicing system that is supposed to be ported into mntbooks' Ruby code.
 
 ## License
 
@@ -18,6 +17,7 @@ mntbooks is licensed under GPLv3+.
 - On-demand PDF rotation
 - Ledger (plaintext accounting) export
 - pdfocr.sh script helps with automated OCRing of incoming scanned receipts
+- New: Parts / BOM management system
 
 # Dependencies
 
@@ -27,5 +27,9 @@ mntbooks is licensed under GPLv3+.
 
 ## Gems
 
-`gem install sinatra sqlite3 paypal_nvp ruby_fints`
+`gem install sinatra sqlite3 paypal_nvp ruby_fints sinatra-namespace zip rack http`
+
+## Start
+
+`rackup`
 
