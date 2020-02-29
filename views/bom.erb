@@ -28,7 +28,7 @@
       %>
       <% bom_items.each do |i| %>
       <tr>
-        <td><%= i[:id] %></td>
+        <td><a href="?edit=<%= i[:id] %>"><%= i[:id] %></a></td>
         <td style="width:200px;"><%= i[:references] %></td>
         <td><%= i[:value] %></td>
         <td><%= i[:footprint] %></td>
@@ -87,25 +87,25 @@
     <form method="POST" action="../boms/<%= bom_id %>/items">
       <div class="form-group">
         <label class="form-label">ID</label>
-        <input class="form-input" type="text" name="id">
+        <input class="form-input" type="text" name="id" value="<%= edit_bom_item[:id] %>">
         
         <label class="form-label">Quantity</label>
-        <input class="form-input" type="text" name="qty">
+        <input class="form-input" type="text" name="qty" value="<%= edit_bom_item[:qty] %>">
         
         <label class="form-label">References</label>
-        <input class="form-input" type="text" name="references">
+        <input class="form-input" type="text" name="references" value="<%= edit_bom_item[:references] %>">
         
         <label class="form-label">Value</label>
-        <input class="form-input" type="text" name="value">
+        <input class="form-input" type="text" name="value" value="<%= edit_bom_item[:value] %>">
         
         <label class="form-label">Footprint</label>
-        <input class="form-input" type="text" name="footprint">
+        <input class="form-input" type="text" name="footprint" value="<%= edit_bom_item[:footprint] %>">
         
         <label class="form-label">Manufacturer</label>
-        <input class="form-input" type="text" name="manufacturer">
+        <input class="form-input" type="text" name="manufacturer" value="<%= edit_bom_item[:manufacturer] %>">
         
         <label class="form-label">Part Number</label>
-        <input class="form-input" type="text" name="part_number">
+        <input class="form-input" type="text" name="part_number" value="<%= edit_bom_item[:part_number] %>">
       </div>
       <div class="form-group">
         <input type="submit" name="save" value="Save">

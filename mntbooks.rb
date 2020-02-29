@@ -772,9 +772,15 @@ class MNTBooks < Sinatra::Base
       calculate_builds = 1
       calculate_builds = params[:builds].to_i if params[:builds]
 
+      edit_bom_item = {}
+      if params[:edit]
+        edit_bom_item = @parts.get_bom_items.where(:bom_id => params[:id]).where(:id => params[:edit]).first
+      end
+      
       erb :bom, :locals => {
             :bom => bom,
             :bom_id => bom[:id],
+            :edit_bom_item => edit_bom_item,
             :bom_items => items,
             :matching_parts => matching_parts,
             :builds => calculate_builds,
