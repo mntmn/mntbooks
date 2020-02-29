@@ -744,9 +744,14 @@ class MNTBooks < Sinatra::Base
       data = {
         :name => params["name"]
       }
-      
-      id = boms.insert(data)
-      redirect PREFIX+"/boms?added=#{id}"
+
+      if params["id"].size>0
+        boms.where(:id => params["id"]).update(data)
+        redirect PREFIX+"/boms"
+      else
+        id = boms.insert(data)
+        redirect PREFIX+"/boms?notification=Created BOM #{id}."
+      end
     end
     
     get '/boms/:id' do
