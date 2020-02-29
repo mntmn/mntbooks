@@ -54,9 +54,9 @@
           <% end %>
         </td>
         <td>
-          <% if matching_parts[i[:id]].nil? %>
+          <% if matching_parts[i[:id]].nil? && !i[:qty].nil? %>
             <%= i[:qty]*builds %>
-          <% else %>
+          <% elsif !i[:qty].nil? %>
             <%
               buy = [i[:qty]*builds - matching_parts[i[:id]][:stock_qty], 0].max
               to_buy += 1
