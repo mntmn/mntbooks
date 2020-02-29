@@ -58,7 +58,8 @@
         <th>Loc</th>
         <th></th>
         <th></th>
-        <th>Mouser Qty</th>
+        <th>Distrib</th>
+        <th>D Qty</th>
       </tr>
       <% parts.each do |p| %>
       <tr <% if highlight==p[:id] %>class="highlight"<% end %>>
@@ -84,6 +85,7 @@
         <td><%= p[:location] %></td>
         <td><% if !p[:datasheet_url].nil? %><a target="_blank" href="<%= p[:datasheet_url] %>">🗎</a><% end %></td>
         <td><% if !p[:mouser_url].nil? %><a target="_blank" href="<%= p[:mouser_url] %>">🔍</a><% end %></td>
+        <td><%= p[:distributor] %></td>
         <td><%= p[:mouser_stock_qty] %></td>
       </tr>
       <% end %>
@@ -97,7 +99,7 @@
         <input class="form-input" type="text" name="id" value="<%= edit_id %>">
         
         <label class="form-label">Manufacturer</label>
-        <input class="form-input" type="text" name="manufacturer">
+        <input class="form-input" type="text" name="manufacturer" value="<%= part[:manufacturer] %>">
 
         <label class="form-label">Part No</label>
         <input class="form-input" type="text" name="part_number" value="<%= part[:part_number] %>">
@@ -109,10 +111,13 @@
         <input class="form-input" type="text" name="location" value="<%= part[:location] %>">
         
         <label class="form-label">Type</label>
-        <input class="form-input" type="text" name="category">
+        <input class="form-input" type="text" name="category" value="<%= part[:category] %>">
 
         <label class="form-label">Description</label>
-        <input class="form-input" type="text" name="description">
+        <input class="form-input" type="text" name="description" value="<%= part[:description] %>">
+        
+        <label class="form-label">Distributor</label>
+        <input class="form-input" type="text" name="distributor" value="<%= part[:distributor] || 'Mouser' %>">
       </div>
       <div class="form-group">
         <input type="submit" name="save" value="Save">

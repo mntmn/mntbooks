@@ -9,11 +9,13 @@
       <tr>
         <th>ID</th>
         <th>Name</th>
+        <th>Part No / SKU</th>
       </tr>
       <% boms.each do |b| %>
       <tr>
         <td><%= b[:id] %></td>
         <td><a href="<%= prefix %>/boms/<%= b[:id] %>"><%= b[:name] %></a></td>
+        <td><a href="<%= prefix %>/parts-find?part_number=<%= b[:part_number] %>"><%= b[:part_number] %></a></td>
       </tr>
       <% end %>
     </table>
@@ -27,6 +29,9 @@
         
         <label class="form-label">Name</label>
         <input class="form-input" type="text" name="name">
+        
+        <label class="form-label">Part No / SKU</label>
+        <input class="form-input" type="text" name="part_number">
       </div>
       <div class="form-group">
         <input type="submit" name="save" value="Save">

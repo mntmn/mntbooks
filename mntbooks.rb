@@ -742,7 +742,8 @@ class MNTBooks < Sinatra::Base
       boms = @parts.get_boms
 
       data = {
-        :name => params["name"]
+        :name => params["name"],
+        :part_number => params["part_number"]
       }
 
       if params["id"].size>0

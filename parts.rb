@@ -32,6 +32,7 @@ class Parts
         String :part_number
         String :category
         String :description
+        String :distributor
         Integer :stock_qty
         String :location
         Float :capacitance
@@ -77,7 +78,7 @@ class Parts
       @DB.create_table :boms do
         primary_key :id
         String :name
-        Integer :result_part_id
+        String :part_number
         String :created_at
         String :updated_at
       end
@@ -129,7 +130,7 @@ class Parts
 
   # TODO: scope to parts that have no info
   def populate_parts_from_mouser(api_key)
-    @DB[:parts].where(Sequel.lit('mouser_stock_qty is null')).each do |row|
+    @DB[:parts].where(Sequel.lit('mouser_stock_qty is null')).where(:distributor => 'Mouser').each do |row|
       pn = row[:part_number]
       puts "Part: #{pn}"
 

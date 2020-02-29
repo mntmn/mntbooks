@@ -6,7 +6,7 @@
   <body>
     <%= erb :menu, :locals => { :active => :boms, :prefix => prefix } %>
 
-    <h2><%= bom[:name] %></h2>
+    <h2><%= bom[:name] %> (<%= bom[:part_number] %>)</h2>
     
     <table>
       <tr>
