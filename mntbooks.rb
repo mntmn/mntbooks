@@ -799,10 +799,7 @@ class MNTBooks < Sinatra::Base
         :manufacturer => params["manufacturer"],
         :part_number => params["part_number"],
         :value => params["value"],
-        :footprint => params["footprint"],
-        :datasheet_url => params["datasheet_url"],
-        :mouser_url => params["mouser_url"],
-        :image_url => params["image_url"]
+        :footprint => params["footprint"]
       }
 
       # TODO: auto-match part
