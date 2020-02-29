@@ -830,7 +830,7 @@ class MNTBooks < Sinatra::Base
           :footprint => row['Footprint'] || row['footprint'],
           :part_number => row['Manufacturer_No'] || row['part_number']
         }
-        if !data[references].nil? && data[references].size>0
+        if !data[:references].nil? && data[:references].size>0
           bom_items.insert(data)
         end
       end
