@@ -1,0 +1,76 @@
+<html>
+  <head>
+    <%= erb :style %>
+    <link rel="stylesheet" href="../dist/auto-complete.css"></link>
+    <title>Purchase Order</title>
+  </head>
+  <body>
+    <%= erb :menu, :locals => { :active => :pos, :prefix => prefix } %>
+
+    <h2><%= po[:po_number] %> (<%= po[:supplier] %> / <%= po[:order_number] %>)</h2>
+    <h3>ETA: <%= po[:eta] %></h3>
+    
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>Manufacturer</th>
+        <th>Part No</th>
+        <th>Qty</th>
+        <th>Price</th>
+        <th>Notes</th>
+      </tr>
+      <% po_items.each do |i| %>
+      <tr>
+        <td><a href="?edit=<%= i[:id] %>"><%= i[:id] %></a></td>
+        <td><%= i[:manufacturer] %></td>
+        <td><%= i[:part_number] %></td>
+        <td><%= i[:qty] %></td>
+        <td><%= i[:sum_cents]/100 %></td>
+        <td><%= i[:notes] %></td>
+      </tr>
+      <% end %>
+    </table>
+    
+    <h3>Add / Edit PO Item</h3>
+
+    <form method="POST" action="../purchase-orders/<%= po_id %>/items">
+      <div class="form-group">
+        <label class="form-label">ID</label>
+        <input class="form-input" type="text" name="id" value="<%= edit_po_item[:id] %>">
+        
+        <label class="form-label">Quantity</label>
+        <input class="form-input" type="number" name="qty" value="<%= edit_po_item[:qty] %>">
+        
+        <label class="form-label">Manufacturer</label>
+        <input class="form-input" type="text" name="manufacturer" value="<%= edit_po_item[:manufacturer] %>">
+        
+        <label class="form-label">Part Number</label>
+        <input class="form-input" type="text" name="part_number" value="<%= edit_po_item[:part_number] %>">
+        
+        <label class="form-label">Sum (Cents)</label>
+        <input class="form-input" type="number" name="sum_cents" value="<%= edit_po_item[:sum_cents] %>">
+        
+        <label class="form-label">Notes</label>
+        <input class="form-input" type="text" name="notes" value="<%= edit_po_item[:notes] %>">
+      </div>
+      <div class="form-group">
+        <input type="submit" name="save" value="Save">
+      </div>
+    </form>
+    
+    <h3>CSV Import</h3>
+    
+    <div>
+      <form method="POST" action="<%= po_id %>/bulk">
+        <div class="form-group">
+          <label class="form-label">CSV</label>
+          <textarea class="form-input" name="csv" cols="80" rows="20"></textarea>
+        </div>
+        <div class="form-group">
+          <input type="submit" name="save" value="Save">
+        </div>
+      </form>
+    </div>
+    
+  </body>
+</html>

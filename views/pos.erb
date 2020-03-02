@@ -1,0 +1,62 @@
+<html>
+  <head>
+    <%= erb :style %>
+    <link rel="stylesheet" href="dist/auto-complete.css"></link>
+    <title>POs</title>
+  </head>
+  <body>
+    <%= erb :menu, :locals => { :active => :pos, :prefix => prefix } %>
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>Supplier</th>
+        <th>PO Number</th>
+        <th>Order Number</th>
+        <th>State</th>
+        <th>Ordered At</th>
+        <th>ETA</th>
+      </tr>
+      <% pos.each do |p| %>
+      <tr>
+        <td><%= p[:id] %></td>
+        <td><%= p[:supplier] %></td>
+        <td><a href="<%= prefix %>/purchase-orders/<%= p[:id] %>"><%= p[:po_number] %></a></td>
+        <td><%= p[:order_number] %></td>
+        <td><%= p[:state] %></td>
+        <td><%= p[:ordered_at] %></td>
+        <td><%= p[:eta] %></td>
+      </tr>
+      <% end %>
+    </table>
+
+    <h3>Add / Edit PO</h3>
+
+    <form method="POST" action="<%= prefix %>/purchase-orders">
+      <div class="form-group">
+        <label class="form-label">ID</label>
+        <input class="form-input" type="text" name="id">
+        
+        <label class="form-label">PO Number</label>
+        <input class="form-input" type="text" name="po_number">
+        
+        <label class="form-label">Supplier</label>
+        <input class="form-input" type="text" name="supplier">
+        
+        <label class="form-label">Supplier Order Number</label>
+        <input class="form-input" type="text" name="order_number">
+        
+        <label class="form-label">State</label>
+        <input class="form-input" type="text" name="state">
+        
+        <label class="form-label">Ordered At</label>
+        <input class="form-input" type="text" name="ordered_at">
+        
+        <label class="form-label">ETA</label>
+        <input class="form-input" type="text" name="eta">
+      </div>
+      <div class="form-group">
+        <input type="submit" name="save" value="Save">
+      </div>
+    </form>
+  </body>
+</html>
