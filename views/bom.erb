@@ -18,7 +18,9 @@
         <th>Part No</th>
         <th>Qty Req</th>
         <th>In Stock</th>
-        <th>To Buy (x<%= builds %>)</th>
+        <th>Missing (x<%= builds %>)</th>
+        <th>Ordered</th>
+        <th>ETA</th>
       </tr>
       <%
         buildable_units = 0 
@@ -27,8 +29,12 @@
         to_buy = 0
       %>
       <% bom_items.each do |i| %>
+      <% if i[:sub_bom] %>
+      <tr style="font-weight: bold">
+      <% else %>
       <tr>
-        <td><a href="?edit=<%= i[:id] %>"><%= i[:id] %></a></td>
+      <% end %>
+        <td><% (1..i[:level]).each do |l| %>&nbsp;&nbsp;<% end %> <a href="?edit=<%= i[:id] %>"><% if i[:sub_bom] %>↘<% end %><%= i[:id] %></a></td>
         <td style="width:200px;"><%= i[:references] %></td>
         <td><%= i[:value] %></td>
         <td><%= i[:footprint] %></td>
@@ -64,20 +70,32 @@
             <%= buy %>
           <% end %>
         </td>
+        <td>
+          <%= i[:po_item][:qty] %>
+        </td>
+        <td>
+          <a href="../purchase-orders/<%= i[:po][:id] %>">
+            <%= i[:po][:eta] %>
+          </a>
+        </td>
       </tr>
       <% end %>
       <tr>
         <td colspan="6"></td>
         <td>
-          <%= bom_items.sum(:qty) %> Total<br>
-          <%= bom_items.count %> Unique<br>
+          <%= bom_items.sum{|i|i[:qty]} %> Total<br>
+          <%= bom_items.size %> Unique<br>
         </td>
         <td>
-          <%= unmatched_parts %> Unknown Parts<br>
-          <%= lowest_buildable_count %> Buildable Units<br>
+          <%= unmatched_parts %> UPs<br>
+          <%= lowest_buildable_count %> BUs<br>
         </td>
         <td>
-          <%= to_buy %> Unique To Buy
+          <%= to_buy %> MIA
+        </td>
+        <td>
+        </td>
+        <td>
         </td>
       </tr>
     </table>

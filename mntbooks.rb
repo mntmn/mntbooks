@@ -754,20 +754,51 @@ class MNTBooks < Sinatra::Base
         redirect PREFIX+"/boms?notification=Created BOM #{id}."
       end
     end
-    
-    get '/boms/:id' do
-      bom = @parts.get_boms.where(:id => params[:id]).first
-      items = @parts.get_bom_items.where(:bom_id => params[:id]).order(:references, :value)
 
-      matching_parts = {}
-
+    def collect_bom_items(result_items, bom, matching_parts, recursive, level)
+      items = @parts.get_bom_items.where(:bom_id => bom[:id]).order(:references, :value).all
+      
       items.each do |item|
+        item[:level] = level
+        item[:po_item] = {}
+        item[:po] = {}
+        
+        result_items.push(item.to_h)
         parts = @parts.get_parts.where(:part_number => item[:part_number]).all
         
         if parts.size>0
           matching_parts[item[:id]] = parts.first
         end
+
+        # look up any matching items currently on order
+        po_items = @parts.get_po_items.where(:part_number => item[:part_number]).all
+        # fixme aggregate multiple orders
+        po_items.each do |poi|
+          po = @parts.get_pos.where(:id => poi[:po_id]).first
+          item[:po_item] = poi
+          item[:po] = po
+        end
+
+        if recursive
+          # check if there is a sub-BOM
+          sub_boms = @parts.get_boms.where(:part_number => item[:part_number])
+          if sub_boms.count>0
+            item[:sub_bom] = true
+            collect_bom_items(result_items, sub_boms.first, matching_parts, true, level+1)
+          end
+        end
       end
+      
+      result_items
+    end
+    
+    get '/boms/:id' do
+      items = []
+      matching_parts = {}
+      recursive = params[:tree] || false
+
+      bom = @parts.get_boms.where(:id => params[:id]).first
+      collect_bom_items(items, bom, matching_parts, recursive, 0)
 
       calculate_builds = 1
       calculate_builds = params[:builds].to_i if params[:builds]
@@ -801,8 +832,6 @@ class MNTBooks < Sinatra::Base
         :value => params["value"],
         :footprint => params["footprint"]
       }
-
-      # TODO: auto-match part
       
       existing = bom_items.where(:id => params[:id])
       if existing.count > 0
@@ -836,6 +865,85 @@ class MNTBooks < Sinatra::Base
       end
       
       redirect PREFIX+"/boms/#{bom[:id]}"
+    end
+
+    get '/purchase-orders' do
+      pos = @parts.get_pos.all
+
+      erb :pos, :locals => {
+            :pos => pos,
+            :prefix => PREFIX
+          }
+    end
+    
+    get '/purchase-orders/:id' do
+      items = []
+      matching_parts = {}
+
+      po = @parts.get_pos.where(:id => params[:id]).first
+      items = @parts.get_po_items.where(:po_id => params[:id]).all
+
+      edit_po_item = {}
+      if params[:edit]
+        edit_po_item = @parts.get_po_items.where(:po_id => params[:id]).where(:id => params[:edit]).first
+      end
+      
+      erb :po, :locals => {
+            :po => po,
+            :po_id => po[:id],
+            :edit_po_item => edit_po_item,
+            :po_items => items,
+            :matching_parts => matching_parts,
+            :prefix => PREFIX
+          }
+    end
+    
+    post '/purchase-orders' do
+      pos = @parts.get_pos
+
+      data = {
+        :supplier => params["supplier"],
+        :po_number => params["po_number"],
+        :order_number => params["order_number"],
+        :invoice_url => params["invoice_url"],
+        :contact_url => params["contact_url"],
+        :tracking_url => params["tracking_url"],
+        :eta => params["eta"],
+        :ordered_at => params["ordered_at"],
+        :received_at => params["received_at"],
+        :state => params["state"]
+      }
+
+      if params["id"].size>0
+        pos.where(:id => params["id"]).update(data)
+        redirect PREFIX+"/purchase-orders"
+      else
+        id = pos.insert(data)
+        redirect PREFIX+"/purchase-orders?notification=Created PO #{id}."
+      end
+    end
+    
+    post '/purchase-orders/:po_id/items' do
+      po = @parts.get_pos.where(:id => params[:po_id]).first
+      po_items = @parts.get_po_items
+
+      data = {
+        :po_id => po[:id],
+        :qty => params["qty"],
+        :manufacturer => params["manufacturer"],
+        :part_number => params["part_number"],
+        :sum_cents => params["sum_cents"],
+        :notes => params["notes"]
+      }
+      
+      existing = po_items.where(:id => params[:id])
+      if existing.count > 0
+        po_items.where(:id => params[:id]).update(data)
+      else
+        po_items.insert(data)
+      end
+      
+      redirect PREFIX+"/purchase-orders/#{po[:id]}"
     end
     
   end

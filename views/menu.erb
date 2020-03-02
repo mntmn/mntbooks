@@ -76,4 +76,12 @@
   <a href="<%= prefix %>/boms">BOMs</a>
   <% end %>
   </span>
+  
+  <span>
+  <% if active == :pos %>
+  <a href="<%= prefix %>/purchase-orders"><b>POs</b></a>
+  <% else %>
+  <a href="<%= prefix %>/purchase-orders">POs</a>
+  <% end %>
+  </span>
 </nav>

@@ -82,6 +82,34 @@ class Parts
         String :created_at
         String :updated_at
       end
+      
+      @DB.create_table :purchase_orders do
+        primary_key :id
+        String :po_number
+        String :supplier
+        String :order_number
+        String :invoice_url
+        String :contact_url
+        String :tracking_url
+        String :state
+        String :eta
+        String :ordered_at
+        String :received_at
+        String :created_at
+        String :updated_at
+      end
+      
+      @DB.create_table :po_items do
+        primary_key :id
+        Integer :po_id
+        String :qty
+        String :manufacturer
+        String :part_number
+        String :notes
+        Integer :sum_cents
+        String :created_at
+        String :updated_at
+      end
     end
 
     puts "Parts initialized."
@@ -101,6 +129,14 @@ class Parts
   
   def get_bom_items
     @DB[:bom_items]
+  end
+  
+  def get_pos
+    @DB[:purchase_orders]
+  end
+  
+  def get_po_items
+    @DB[:po_items]
   end
 
   def lookup_mouser_part_number(api_key, pn)
