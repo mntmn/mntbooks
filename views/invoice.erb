@@ -237,7 +237,7 @@
         </tr>
         <tr class="noborder">
           <td colspan="3"></td>
-          <td>USt (<%= invoice[:tax_rate] %>%<% if invoice[:vat_included] %> inkl.<% end %>)</td>
+          <td>USt (<%= invoice[:tax_rate] %>%<% if invoice[:vat_included]=="true" %> inkl.<% end %>)</td>
           <td class="sum"><%= invoice[:tax_total] %></td>
         </tr>
         <tr class="noborder sums-foot grand-total">

@@ -274,7 +274,7 @@ class MNTBooks < Sinatra::Base
 
       payload["id"] = formatted_iid
       payload["details"] = "Invoice #{formatted_iid}"
-      payload["vat_included"] = payload["vat_included"].to_s
+      payload["vat_included"] = payload["vat_included"].to_s # FIXME questionable
 
       payload = OpenStruct.new(payload)
 

@@ -114,7 +114,7 @@ class Book
         customer_city  text,
         customer_state text,
         customer_country text,
-        vat_included int,
+        vat_included varchar(6),
         replaces_id varchar(64),
         replaced_by_id varchar(64),
         created_at varchar(32),
