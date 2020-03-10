@@ -177,11 +177,11 @@ class Parts
         p = parts.first
 
         stock = 0
-        if match = p['Availability'].match(/([0-9]+) In Stock/)
+        if match = (p['Availability'] || '').match(/([0-9]+) In Stock/)
           stock = match.captures.first
         end
 
-        d = p['Description']
+        d = p['Description'] || ''
 
         multipliers = {
           'p' => 1.0/(10**12),
