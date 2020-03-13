@@ -93,6 +93,20 @@
     
     <h3>Add / Edit Part</h3>
 
+    <script>
+      var originalQty = <%= part[:stock_qty]||0 %>
+      
+      function recalcQtyAbsolute(absEl) {
+        relEl = document.getElementById("stock_qty_relative")
+        relEl.value=absEl.value-originalQty
+      }
+      
+      function recalcQtyRelative(relEl) {
+        absEl = document.getElementById("stock_qty_absolute")
+        absEl.value=originalQty+parseInt(relEl.value)
+      }
+    </script>
+
     <form method="POST" action="parts">
       <div class="form-group">
         <label class="form-label">ID</label>
@@ -105,8 +119,10 @@
         <input class="form-input" type="text" name="part_number" value="<%= part[:part_number] %>">
 
         <label class="form-label">Stock Qty</label>
-        <input class="form-input" type="text" name="stock_qty" value="<%= part[:stock_qty] %>" <% if edit_id %>autofocus<% end %>>
-
+        <input class="form-input" type="number" name="stock_qty" id="stock_qty_absolute" value="<%= part[:stock_qty] %>" onchange="recalcQtyAbsolute(this)">
+        <%= part[:stock_qty] %>± 
+        <input class="form-input" type="number" id="stock_qty_relative" value="0" style="width:75px" onchange="recalcQtyRelative(this)" <% if edit_id %>autofocus<% end %>>
+        
         <label class="form-label">Location</label>
         <input class="form-input" type="text" name="location" value="<%= part[:location] %>">
         
@@ -118,6 +134,12 @@
         
         <label class="form-label">Package</label>
         <input class="form-input" type="text" name="package" value="<%= part[:package] %>">
+        
+        <!--label class="form-label">Capacitance (C)</label>
+        <input class="form-input" type="text" name="capacitance" value="<%= part[:capacitance] %>">
+        
+        <label class="form-label">Resistance (Ω)</label>
+        <input class="form-input" type="text" name="resistance" value="<%= part[:resistance] %>"-->
         
         <label class="form-label">Image URL</label>
         <input class="form-input" type="text" name="image_url" value="<%= part[:image_url] %>">
