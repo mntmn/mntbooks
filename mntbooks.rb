@@ -655,7 +655,7 @@ class MNTBooks < Sinatra::Base
     get '/parts-find' do
       parts = @parts.get_parts
 
-      parts = parts.where(:part_number => params[:part_number]).order(:category,:manufacturer,:part_number).all
+      parts = parts.where(Sequel.like(:part_number, "#{params[:part_number]}%")).order(:category,:manufacturer,:part_number).all
 
       found_part = parts.first || {}
 
