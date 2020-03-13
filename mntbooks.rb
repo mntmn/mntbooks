@@ -826,7 +826,7 @@ class MNTBooks < Sinatra::Base
       data = {
         :bom_id => bom[:id],
         :qty => params["qty"],
-        :references => params["references"],
+        :references => (params["references"]||"").split(" ").sort_by{|x|x.gsub(/[^0-9]/,'').to_i}.join(" "),
         :manufacturer => params["manufacturer"],
         :part_number => params["part_number"],
         :value => params["value"],
