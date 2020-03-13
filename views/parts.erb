@@ -68,7 +68,7 @@
         
         <td><%= p[:manufacturer] %></td>
         <td><% if !p[:image_url].nil? %><img src="<%= p[:image_url] %>"><% end %></td>
-        <td><a href="parts-find?part_number=<%= p[:part_number] %>"><%= p[:part_number] %></a></td>
+        <td><a href="parts-find?part_number=<%= URI::encode(p[:part_number]) %>"><%= p[:part_number] %></a></td>
         
         <td><%= fmt.format_val(p[:capacitance],'F') %></td>
         <td><%= fmt.format_val(p[:voltage],'V') %></td>
