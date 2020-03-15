@@ -791,7 +791,7 @@ SQL
       metadata = get_document_metadata(pdfname)
       
       docs.push({
-                  path: path,
+                  path: File.basename(path),
                   title: pdfname,
                   thumbnail: PREFIX+"/thumbnails/#{thumbname}",
                   created: File.mtime(path),
