@@ -741,7 +741,7 @@ SQL
     
     paths = Dir.glob(DOC_FOLDER+"/**.pdf", File::FNM_CASEFOLD).sort
     paths.each do |path|
-      basename = File.basename(path,".pdf")
+      basename = File.basename(path.downcase,".pdf")
       thumbname = "#{basename}.png"
       textname = "#{basename}.txt"
       pdfname = "#{basename}.pdf"

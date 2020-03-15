@@ -83,10 +83,10 @@
     <% i=1 %>
     <% docs.each do |b| %>
     <tr class="doc" id="doc<%=b[:id] %>">
-      <td><a target="_blank" href="<%= prefix %>/pdf/<%= b[:title] %>"><img src="<%= b[:thumbnail] %>"></a></td>
+      <td><a target="_blank" href="<%= prefix %>/pdf/<%= b[:path] %>"><img src="<%= b[:thumbnail] %>"></a></td>
       <td>
         <form method="POST" action="documents?state=<%= state %>#doc<%= b[:id] %>">
-          <h3 class="title"><a target="_blank" href="<%= prefix %>/pdf/<%= b[:title] %>"><%= b[:title] %></a></h3>
+          <h3 class="title"><a target="_blank" href="<%= prefix %>/pdf/<%= b[:path] %>"><%= b[:title] %></a></h3>
           <p class="created">Scanned: <%= b[:created].strftime("%Y-%m-%d")  %> 
             <a href="#doc-<%= b[:id] %>" class="autofill-button" onclick="autoFill('<%=b[:id]%>')">Autofill</a>
           </p>
