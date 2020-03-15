@@ -739,7 +739,7 @@ SQL
   def fetch_all_documents()
     docs = []
     
-    paths = Dir.glob(DOC_FOLDER+"/**.pdf").sort
+    paths = Dir.glob(DOC_FOLDER+"/**.pdf", File::FNM_CASEFOLD).sort
     paths.each do |path|
       basename = File.basename(path,".pdf")
       thumbname = "#{basename}.png"
