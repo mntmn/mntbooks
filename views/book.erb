@@ -37,7 +37,7 @@
           <td>
             <ul>
             <% b[:receipt_urls].each do |r| %>
-            <li><a href="<%= r %>"><%= r.gsub("/pdf/","") %></a></li>
+            <li><a href="<%= r %>"><%= File.basename(r) %></a></li>
             <% end %>
             </ul>
           </td>
