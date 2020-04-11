@@ -9,6 +9,8 @@ require 'pdfkit'
 require 'zip'
 require 'erb'
 require 'uri'
+require 'datev'
+require 'bigdecimal'
 
 require './config.rb'
 
@@ -463,13 +465,31 @@ SQL
   
   def export_quarter
     quarters = {}
+    docs = {}
+    invoices = {}
     
     rows = @book_db.execute <<-SQL
-select id,debit_account,credit_account,date,amount_cents,receipt_url,invoice_id,currency,details,comment from book order by date desc;
+select path,state,docid,date,sum,tags from documents order by date asc;
+SQL
+    rows.each do |row|
+      row = OpenStruct.new(row)
+      docs[row[:path]] = row
+    end
+
+    rows = @book_db.execute <<-SQL
+select id,customer_country,amount_cents,tax_code from invoices order by invoice_date asc;
+SQL
+    rows.each do |row|
+      row = OpenStruct.new(row)
+      invoices[row[:id]] = row
+    end
+    
+    rows = @book_db.execute <<-SQL
+select id,debit_account,credit_account,date,amount_cents,receipt_url,invoice_id,currency,details,comment from book order by date asc;
 SQL
 
     Dir.mkdir(EXPORT_FOLDER) unless File.exists?(EXPORT_FOLDER)
-
+    
     csv_quarters = {}
     booked_documents = {}
     
@@ -479,113 +499,170 @@ SQL
       row = OpenStruct.new(row)
       
       date = row[:date][0..9]
+      year = date[0..3].to_i
       mon = date[5..6].to_i
       quarter = (mon-1)/3+1
       subdir = "#{date[0..3]}Q#{quarter}"
+
+      endmon = quarter*3+3
+      endyear = year
+      if endmon > 12
+        endmon = 1
+        endyear+=1
+      end
+
+      # TODO move to config
       
+      if !quarters.include?(subdir)
+        quarters[subdir] = Datev::BookingExport.new(
+          'Herkunft'        => 'XY',
+          'Exportiert von'  => 'CFO',
+          'Berater'         => DATEV_BERATER,
+          'Mandant'         => DATEV_MANDANT,
+          'WJ-Beginn'       => Date.new(year,1,1),
+          'Datum vom'       => Date.new(year,quarter*3,1),
+          'Datum bis'       => Date.new(endyear,endmon,1)-1,
+          'Bezeichnung'     => "Buchungen Q#{quarter} #{year}"
+        )
+      end
+                           
       receipt = row[:receipt_url]
+      rdocs = []
+      docids = []
+      
       if row[:debit_account].nil?
-      #puts "Warning: no debit_account"
       elsif row[:credit_account].nil?
-      #puts "Warning: no credit_account"
       elsif receipt.nil? || !receipt || receipt == "none"
-      #puts "Warning: no receipt"
+        puts "Warning: no receipt"
       elsif row[:debit_account]=="external"
       elsif row[:credit_account].match(/^customer:/)
       else
-        receipt = receipt.split('#')[0]
         debit = row[:debit_account].gsub(":","-")
         credit = row[:credit_account].gsub(":","-")
-        amount = row[:amount_cents]/100
-        currency = row[:currency]
-
-        quarters[subdir] = true
+        receipt = receipt.split('#')[0]
 
         Dir.mkdir("#{EXPORT_FOLDER}/#{subdir}") unless File.exists?("#{EXPORT_FOLDER}/#{subdir}")
 
-        subdir_category = "expense-misc"
-        if credit.match /assets/
-          subdir_category = "income-misc"
-        end
-        
-        if debit.match /sales/
-          subdir_category = "income"
-          
-        elsif credit.match /(shipping|dhl|post)/
-          subdir_category = "expense-shipping"
-        elsif credit.match /consumables/
-          subdir_category = "expense-consumables"
-        elsif credit.match /rent/
-          subdir_category = "expense-rent"
-        elsif credit.match /salaries/
-          subdir_category = "expense-salaries"
-        elsif credit.match /services/
-          subdir_category = "expense-services"
-          
-        elsif credit.match /(parts|packaging)/
-          subdir_category = "purchase-parts-packaging"
-        elsif credit.match /(tools|monitors|computers|network)/
-          subdir_category = "purchase-tools"
-        elsif credit.match /(furniture|kitchen)/
-          subdir_category = "purchase-furniture"
-        end
-        
-        dirname = "#{EXPORT_FOLDER}/#{subdir}/#{subdir_category}"
+        dirname = "#{EXPORT_FOLDER}/#{subdir}/Belege"
         Dir.mkdir(dirname) unless File.exists?(dirname)
         
         receipt.split(",").each do |r|
           unless receipt[0]=="/"
-            fname = "#{date}-#{amount}#{currency}-#{r}"
-            fname_full = "#{dirname}/#{fname}"
-            puts "#{fname_full} <- #{credit} #{debit}"
-            src = DOC_FOLDER+"/"+r
-            begin
-              FileUtils.cp(src,fname_full)
-            rescue
-              puts "ERROR: file #{src} missing!"
-            end
+            doc = docs[r]
 
-            receipt_paths.push("#{subdir_category}/#{fname}")
-            
-            booked_documents[r] = true
+            if doc.nil?
+              puts "unknown doc: #{r}"
+            elsif doc[:docid].nil?
+              puts "doc without docid: #{r}",doc
+            else
+              rdocs.push(doc)
+              docids.push(doc[:docid].split(",").first)
+              fname = "#{doc[:docid]}.pdf"
+              fname_full = "#{dirname}/#{fname}"
+              puts "#{fname_full} <- #{credit} #{debit}"
+              src = DOC_FOLDER+"/"+r
+              begin
+                FileUtils.cp(src,fname_full)
+              rescue
+                puts "ERROR: file #{src} missing!"
+              end
+
+              receipt_paths.push("#{fname}")
+              
+              booked_documents[r] = true
+            end
           end
         end
       end
 
-      # receipts saved, generate csv row
-
       asset_account = row[:credit_account]
-      
-      amount_int  = row[:amount_cents]/100
-      amount_frac = row[:amount_cents]%100
-      amount_frac = "0#{amount_frac}" if amount_frac<10
+      amount = BigDecimal.new(row[:amount_cents])/100
+      shz = 'H'
+      text = row[:debit_account]
+      acc1 = 0
+      acc2 = 0
+      comment = ""
+
+      # TODO maybe merge PDFs into 1?
+
+      (y,m,d) = row[:date].split('T').first.split('-')
+
+      detail = row[:details].sub(/.*SVWZ\+ /,'')
+      docid = ""
+      if docids.size>0
+        docid = docids.first[0..35]
+        comment = rdocs.first[:tags]
+      end
+      doclink = ""
+      if receipt_paths.size>0
+        doclink = "DDMS \"#{receipt_paths[0]}\""
+      end
+
+      taxcode = ''
+      taxrate = nil
+      country = ''
+      if invoices.include?(docid)
+        country = invoices[docid][:customer_country]
+        taxcode = invoices[docid][:tax_code]
+        puts taxcode
+        if taxcode == "EU19"
+          taxrate = 19
+        elsif taxcode == "NONEU0"
+          taxrate = 0
+        end
+      end
       
       if row[:debit_account].match /assets/
-        amount_int = -amount_int
         asset_account = row[:debit_account]
-      end
-      amount = "#{amount_int}.#{amount_frac}"
+        shz = 'S'
+        text = row[:credit_account]
 
-      if !csv_quarters.include?(subdir)
-        csv_quarters[subdir] = []
+        acc1 = DATEV_ACCS[row[:debit_account]]
+        acc2 = DATEV_ACCS[row[:credit_account]] || 0
+
+        if acc1.nil?
+          puts "invalid debit acc: #{row[:debit_account]}"
+          exit
+        end
+        if acc2.nil?
+          puts "invalid credit acc: #{row[:credit_account]}"
+          exit
+        end
+        
+      else
+        if invoices.include?(docid)
+          acc1 = DATEV_ACCS["sales:#{taxcode}"]
+
+          DATEV_ACCS.each do |k,v|
+            if row[:credit_account].match(k)
+              acc2 = v
+            end
+          end
+        end
       end
 
-      comment_cleaned = row[:comment].to_s.sub(/^\d{4}-\d{2}-\d{2}T[^ ]+ [^ ]+ ?/,"")
-      
-      csv_quarters[subdir].push([
-                               row[:date][0..9],
-                               row[:currency],
-                               amount,
-                               asset_account,
-                               row[:details],
-                               receipt_paths.join("\r\n"),
-                               comment_cleaned,
-                               row[:invoice_id]
-                             ])
+      export = {
+        'Belegdatum' => Date.new(y.to_i,m.to_i,d.to_i),
+        'Umsatz (ohne Soll/Haben-Kz)' => amount,
+        'WKZ Umsatz' => row[:currency],
+        'Soll/Haben-Kennzeichen' => shz,
+        'Konto' => acc1,
+        'Gegenkonto (ohne BU-Schlüssel)' => acc2,
+        'Buchungstext' => text,
+        'Belegfeld 1' => docid,
+        'Land' => country,
+        'Steuersatz' => taxrate,
+        'Beleglink' => doclink,
+        'Beleginfo – Art 1' => 'Kontoumsätze',
+        'Beleginfo – Inhalt 1' => detail[0..209],
+        'Zusatzinformation – Art 1' => 'Kommentar',
+        'Zusatzinformation – Inhalt 1' => comment
+      }
+        
+      quarters[subdir] << export
     end
 
     # FIXME these should also be booked as cash transactions
-    # FIXME extract documents that have a sum but no associated booking
     
     rows = @book_db.execute <<-SQL
 select path,state,docid,date,sum,tags from documents order by date desc;
@@ -595,7 +672,6 @@ SQL
 
       if !booked_documents.include?(row[:path]) && row[:sum].to_f>0
         account = "unbooked"
-        # FIXME: a copy of outgoing invoices ends up as unbooked, cluttering the unbooked folder
         
         if !row[:tags].nil?
           tags = row[:tags].split(",").sort
@@ -606,63 +682,28 @@ SQL
         
         date = row[:date][0..9]
         amount = row[:sum]
-        currency = "EUR" # FIXME
-        
+        # currency = "EUR" # FIXME
+
+        year = date[0..3].to_i
         mon = date[5..6].to_i
         quarter = (mon-1)/3+1
         subdir = "#{date[0..3]}Q#{quarter}"
-        quarters[subdir] = true
 
-        Dir.mkdir("#{EXPORT_FOLDER}/#{subdir}") unless File.exists?("#{EXPORT_FOLDER}/#{subdir}")
-
-        subdir_category = account
-        dirname = "#{EXPORT_FOLDER}/#{subdir}/#{subdir_category}"
-        Dir.mkdir(dirname) unless File.exists?(dirname)
-
-        fname = "#{date}-#{amount}#{currency}-#{tags.join('-')}.pdf"
-        fname_full = "#{dirname}/#{fname}"
-        
-        puts "#{fname_full} <- #{row[:path]}"
-        src = DOC_FOLDER+"/"+row[:path]
-        begin
-          FileUtils.cp(src,fname_full)
-        rescue
-          puts "ERROR: file #{src} missing!"
-        end
-        
-        if !csv_quarters.include?(subdir)
-          csv_quarters[subdir] = []
-        end
-
-        # "unbooked" docs are useless in the mapping table
-        if (account!="unbooked")
-          csv_quarters[subdir].push([
-                                      date,
-                                      currency,
-                                      amount,
-                                      account,
-                                      row[:docid],
-                                      "#{subdir_category}/#{fname}",
-                                      tags.join(" "),
-                                      row[:invoice_id]
-                                    ])
+        if (year == 2019 && quarter == 4)
+          puts "UNBOOKED: #{row[:path]} #{row[:sum]} #{row[:tags]}"
         end
       end
     end
 
-    # generate CSV report for each quarter
+    # generate DATEV export for each quarter
     
-    csv_quarters.keys.each do |quarter|
-      sorted = csv_quarters[quarter].sort {|a,b| a[0] <=> b[0]}
+    quarters.keys.each do |quarter|
+      sorted = quarters[quarter] ##csv_quarters[quarter].sort {|a,b| a[0] <=> b[0]}
 
       dirname = "#{EXPORT_FOLDER}/#{quarter}"
       Dir.mkdir(dirname) unless File.exists?(dirname)
-      csv_path = "#{dirname}/table.csv"
-      CSV.open(csv_path, "wb") do |csv|
-        sorted.each do |r|
-          csv << r
-        end
-      end
+      csv_path = "#{dirname}/EXTF_Buchungsstapel.csv"
+      sorted.to_file(csv_path)
     end
     
     quarters.keys
