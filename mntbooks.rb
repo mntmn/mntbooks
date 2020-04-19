@@ -792,12 +792,12 @@ class MNTBooks < Sinatra::Base
       result_items
     end
     
-    get '/boms/:id' do
+    get '/boms/:part_number' do
       items = []
       matching_parts = {}
       recursive = params[:tree] || false
 
-      bom = @parts.get_boms.where(:id => params[:id]).first
+      bom = @parts.get_boms.where(:part_number => params[:part_number]).first
       collect_bom_items(items, bom, matching_parts, recursive, 0)
 
       calculate_builds = 1
@@ -805,7 +805,7 @@ class MNTBooks < Sinatra::Base
 
       edit_bom_item = {}
       if params[:edit]
-        edit_bom_item = @parts.get_bom_items.where(:bom_id => params[:id]).where(:id => params[:edit]).first
+        edit_bom_item = @parts.get_bom_items.where(:bom_id => bom[:id]).where(:id => params[:edit]).first
       end
       
       erb :bom, :locals => {
@@ -818,15 +818,19 @@ class MNTBooks < Sinatra::Base
             :prefix => PREFIX
           }
     end
+
+    def parts_sort_references(refs)
+      refs.split(" ").sort_by{|x|x.gsub(/[^0-9]/,'').to_i}.join(" ")
+    end
     
-    post '/boms/:bom_id/items' do
-      bom = @parts.get_boms.where(:id => params[:bom_id]).first
+    post '/boms/:bom_part_number/items' do
+      bom = @parts.get_boms.where(:id => params[:bom_part_number]).first
       bom_items = @parts.get_bom_items
 
       data = {
         :bom_id => bom[:id],
         :qty => params["qty"],
-        :references => (params["references"]||"").split(" ").sort_by{|x|x.gsub(/[^0-9]/,'').to_i}.join(" "),
+        :references => parts_sort_references(params["references"]||""),
         :manufacturer => params["manufacturer"],
         :part_number => params["part_number"],
         :value => params["value"],
@@ -840,23 +844,100 @@ class MNTBooks < Sinatra::Base
         bom_items.insert(data)
       end
       
+      redirect PREFIX+"/boms/#{bom[:part_number]}"
+    end
+    
+    post '/boms/:part_number/schematic' do
+      bom = @parts.get_boms.where(:part_number => params[:part_number]).first
+      bom_items = @parts.get_bom_items
+
+      rows = File.readlines(params[:sch]["tempfile"])
+
+      if rows.size>0 && params[:clear].to_i == 1
+        bom_items.where(:bom_id => bom[:id]).delete
+      end
+      
+      merged = {}
+      comp = {}
+      st = :endcomp
+      rows.each do |row|
+        begin
+          cols = CSV.parse_line(row, {col_sep: " "})
+        rescue
+          cols = []
+          puts "Warning: could not parse line:",row
+        end
+        
+        if st == :endcomp
+          if cols.first == '$Comp'
+            st = :comp
+          end
+        elsif st == :comp
+          if cols.first == 'L'
+            comp[:ref] = cols[2]
+          end
+          if cols.first == 'F'
+            fno = cols[1].to_i
+            if fno == 1
+              comp[:value] = cols[2]
+            elsif fno == 2
+              comp[:footprint] = cols[2]
+            elsif fno>3 && cols.size>10 && cols.last == 'Manufacturer'
+              comp[:manufacturer] = cols[2]
+            elsif fno>3 && cols.size>10 && cols.last == 'Manufacturer_No'
+              comp[:part_number] = cols[2]
+            elsif fno>3 && cols.size>10 && cols.last == 'Flags'
+              comp[:flags] = cols[2]
+            end
+          end
+          if cols.first == '$EndComp'
+            st = :endcomp
+            if !comp[:part_number].nil? && comp[:part_number].size>0 && !comp[:flags].to_s.match("DNP")
+              key = "#{comp[:manufacturer]}-#{comp[:part_number]}"
+              refs = comp[:ref]
+              qty = 1
+              if merged.include?(key)
+                refs = merged[key][:references]+' '+refs
+                qty = merged[key][:qty]+1
+              end
+              merged[key] = comp
+              merged[key][:references] = refs
+              merged[key][:qty] = qty
+            end
+            comp = {}
+          end
+        end
+      end
+
+      merged.each do |k,v|
+        v.delete(:ref)
+        v.delete(:flags)
+        v[:bom_id] = bom[:id]
+        v[:references] = parts_sort_references(v[:references])
+        bom_items.insert(v)
+      end
+      
       redirect PREFIX+"/boms/#{bom[:id]}"
     end
     
-    post '/boms/:bom_id/bulk' do
-      bom = @parts.get_boms.where(:id => params[:bom_id]).first
+    post '/boms/:part_number/csv' do
+      bom = @parts.get_boms.where(:part_number => params[:part_number]).first
       bom_items = @parts.get_bom_items
 
-      table = CSV.parse(params[:csv], headers: true)
+      table = CSV.parse(params[:csv]["tempfile"], headers: true)
+
+      if table.size>0 && params[:clear].to_i == 1
+        bom_items.where(:bom_id => bom[:id]).delete
+      end
 
       table.each do |row|
         data = {
           :bom_id => bom[:id],
-          :qty => row['Quantity'] || row['qty'],
-          :value => row['Value'] || row['value'],
-          :references => row['Reference'] || row['references'],
-          :manufacturer => row['Manufacturer'] || row['manufacturer'],
-          :footprint => row['Footprint'] || row['footprint'],
+          :qty => row['qty'],
+          :value => row['value'],
+          :references => row['references'],
+          :manufacturer => row['manufacturer'] || row['manufacturer'],
+          :footprint => row['footprint'],
           :part_number => row['Manufacturer_No'] || row['part_number']
         }
         if !data[:references].nil? && data[:references].size>0

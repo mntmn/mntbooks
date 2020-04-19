@@ -8,7 +8,7 @@
 
     <h2><%= bom[:name] %> (<%= bom[:part_number] %>)</h2>
     
-    <table>
+    <table class="parts-table">
       <tr>
         <th>ID</th>
         <th>References</th>
@@ -39,7 +39,12 @@
         <td><%= i[:value] %></td>
         <td><%= i[:footprint] %></td>
         <td><%= i[:manufacturer] %></td>
-        <td><%= i[:part_number] %></td>
+        <td>
+          <% if !matching_parts[i[:id]].nil? && !matching_parts[i[:id]][:image_url].nil? %>
+            <img src="<%= matching_parts[i[:id]][:image_url] %>">
+          <% end %>
+          <a href="../parts-find?part_number=<%= i[:part_number] %>"><%= i[:part_number] %></a>
+        </td>
         <td><%= i[:qty] %></td>
         <td>
           <% if matching_parts[i[:id]].nil? %>
@@ -60,13 +65,14 @@
         </td>
         <td>
           <% if matching_parts[i[:id]].nil? && !i[:qty].nil? %>
+            <% lowest_buildable_count = 0 %>
             <%= i[:qty]*builds %>
           <% elsif !i[:qty].nil? %>
             <%
               buy = [i[:qty]*builds - matching_parts[i[:id]][:stock_qty], 0].max
-              to_buy += 1
+              to_buy += 1 if buy>0
             %>
-            <%= buy %>
+            <%= buy>0 ? buy : '' %>
           <% end %>
         </td>
         <td>
@@ -82,15 +88,15 @@
       <tr>
         <td colspan="6"></td>
         <td>
-          <%= bom_items.sum{|i|i[:qty]} %> Total<br>
-          <%= bom_items.size %> Unique<br>
+          <%= bom_items.sum{|i|i[:qty].to_i} %> Parts<br>
+          <%= bom_items.size %> Uniq<br>
         </td>
         <td>
-          <%= unmatched_parts %> UPs<br>
-          <%= lowest_buildable_count %> BUs<br>
         </td>
         <td>
-          <%= to_buy %> MIA
+          <b><%= unmatched_parts %> UPs<br>
+          <%= to_buy %> MIA<br>
+          <%= lowest_buildable_count %> BUs<br></b>
         </td>
         <td>
         </td>
@@ -129,13 +135,37 @@
       </div>
     </form>
     
+    <h3>Schematic Import</h3>
+    
+    <div>
+      <form method="POST" action="<%= bom_id %>/schematic">
+        <div class="form-group">
+          <label class="form-label">KiCAD .sch File</label>
+          <input type="file" class="form-input" name="sch">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Delete Existing Items
+            <input type="checkbox" class="form-input" name="clear" value="1">
+          </label>
+        </div>
+        <div class="form-group">
+          <input type="submit" name="save" value="Save">
+        </div>
+      </form>
+    </div>
+    
     <h3>CSV Import</h3>
     
     <div>
-      <form method="POST" action="<%= bom_id %>/bulk">
+      <form method="POST" action="<%= bom_id %>/schematic">
         <div class="form-group">
-          <label class="form-label">CSV</label>
-          <textarea class="form-input" name="csv" cols="80" rows="20"></textarea>
+          <label class="form-label">KiCAD .sch File</label>
+          <input type="file" class="form-input" name="sch">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Delete Existing Items
+            <input type="checkbox" class="form-input" name="clear" value="1">
+          </label>
         </div>
         <div class="form-group">
           <input type="submit" name="save" value="Save">

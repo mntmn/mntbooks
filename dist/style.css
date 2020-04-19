@@ -152,3 +152,7 @@ table table {
 input.receipt {
     margin-bottom: 1em;
 }
+
+.parts-table img {
+    height: 32px;
+}

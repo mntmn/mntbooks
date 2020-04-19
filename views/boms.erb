@@ -14,7 +14,7 @@
       <% boms.each do |b| %>
       <tr>
         <td><%= b[:id] %></td>
-        <td><a href="<%= prefix %>/boms/<%= b[:id] %>"><%= b[:name] %></a></td>
+        <td><a href="<%= prefix %>/boms/<%= b[:part_number] %>"><%= b[:name] %></a></td>
         <td><a href="<%= prefix %>/parts-find?part_number=<%= b[:part_number] %>"><%= b[:part_number] %></a></td>
       </tr>
       <% end %>
