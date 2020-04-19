@@ -12,4 +12,6 @@ gem "zip"
 gem "rack"
 gem "http"
 gem "datev"
+gem "pry-doc"
+gem "sequel"
 
