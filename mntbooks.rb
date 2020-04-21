@@ -873,12 +873,11 @@ class MNTBooks < Sinatra::Base
             st = :comp
           end
         elsif st == :comp
-          if cols.first == 'L'
-            comp[:ref] = cols[2]
-          end
           if cols.first == 'F'
             fno = cols[1].to_i
-            if fno == 1
+            if fno == 0
+              comp[:ref] = cols[2]
+            elsif fno == 1
               comp[:value] = cols[2]
             elsif fno == 2
               comp[:footprint] = cols[2]
@@ -889,8 +888,7 @@ class MNTBooks < Sinatra::Base
             elsif fno>3 && cols.size>10 && cols.last == 'Flags'
               comp[:flags] = cols[2]
             end
-          end
-          if cols.first == '$EndComp'
+          elsif cols.first == '$EndComp'
             st = :endcomp
             if !comp[:part_number].nil? && comp[:part_number].size>0 && !comp[:flags].to_s.match("DNP")
               key = "#{comp[:manufacturer]}-#{comp[:part_number]}"
