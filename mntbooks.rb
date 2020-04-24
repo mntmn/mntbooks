@@ -1057,12 +1057,15 @@ class MNTBooks < Sinatra::Base
 
       percentage = ((done.to_f/total.to_f)*100).to_i
 
+      customer_email_scrambled = build[:customer_email].split('@').first+"@..."
+
       html.gsub!('[ ]', '<br><input type="checkbox" readonly>')
       html.gsub!('[x]', '<br><input type="checkbox" checked="checked" readonly>')
 
       erb view, :locals => {
             :b => build,
             :status_html => html,
+            :customer_email_scrambled => customer_email_scrambled,
             :percentage => percentage,
             :prefix => PREFIX
           }

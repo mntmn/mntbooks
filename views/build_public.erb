@@ -10,11 +10,17 @@
       }
     </style>
 
-    <h2>Build: <%= b[:title] %> (<%= b[:part_number] %>)</h2>
+    <nav>
+      <span id="logo">
+        <b><img src="<%= prefix %>/dist/mnt-logo-2015.png"> Build Tracker</b>
+      </span>
+    </nav>
+    
+    <h2><%= b[:title] %> (<%= b[:part_number] %>)</h2>
     <table>
       <tr>
         <th>Customer</th>
-        <td><%= b[:customer_email] %></td>
+        <td><%= customer_email_scrambled %></td>
       </tr>
       <tr>
         <th>Invoice</th>
