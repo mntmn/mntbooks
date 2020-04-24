@@ -14,4 +14,5 @@ gem "http"
 gem "datev"
 gem "pry-doc"
 gem "sequel"
+gem "rdiscount"
 

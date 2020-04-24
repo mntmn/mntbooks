@@ -7,6 +7,7 @@ require 'sinatra'
 require 'pry'
 require 'csv'
 require 'ostruct'
+require 'rdiscount'
 require 'zip'
 require 'sinatra/base'
 require 'sinatra/namespace'
@@ -1024,7 +1025,80 @@ class MNTBooks < Sinatra::Base
       
       redirect PREFIX+"/purchase-orders/#{po[:id]}"
     end
+
+    get '/builds' do
+      builds = @parts.get_builds
+
+      edit_build = {}
+
+      if params[:edit_id].to_i>0
+        edit_build = @parts.get_builds.where(:id => params[:edit_id].to_i).first
+      end
+      
+      erb :builds, :locals => {
+            :builds => builds,
+            :b => edit_build,
+            :prefix => PREFIX
+          }
+    end
     
+    get '/builds/:id' do
+      build = @parts.get_builds.where(:id => params[:id]).first
+
+      html = markdown(build[:status_details])
+
+      def occurences(string, substring)
+        string.scan(/(?=#{substring})/).count
+      end
+
+      todo = occurences(html, '[ ]')
+      done = occurences(html, '[x]')
+      total = todo+done
+
+      puts done, total
+
+      percentage = ((done.to_f/total.to_f)*100).to_i
+
+      html.gsub!('[ ]', '<br><input type="checkbox" readonly>')
+      html.gsub!('[x]', '<br><input type="checkbox" checked="checked" readonly>')
+
+      erb :build, :locals => {
+            :b => build,
+            :status_html => html,
+            :percentage => percentage,
+            :prefix => PREFIX
+          }
+    end
+
+    post '/builds' do
+      builds = @parts.get_builds
+
+      data = {
+        :title => params["title"],
+        :part_number => params["part_number"],
+        :specs => params["specs"],
+        :order_number => params["order_number"],
+        :invoice_number => params["invoice_number"],
+        :shipment_tracking_url => params["shipment_tracking_url"],
+        :customer_email => params["customer_email"],
+        :status => params["status"],
+        :status_details => params["status_details"],
+        :eta => params["eta"]
+      }
+
+      data = data.delete_if {|k, v| v == "" }
+
+      data[:updated_at] = current_iso_date_time
+
+      if params["id"].size>0
+        builds.where(:id => params["id"]).update(data)
+        redirect PREFIX+"/builds"
+      else
+        data[:created_at] = current_iso_date_time
+        id = builds.insert(data)
+        redirect PREFIX+"/builds?notification=Created Build #{id}."
+      end
+    end
   end
   
 end

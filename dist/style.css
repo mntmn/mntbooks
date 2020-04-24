@@ -70,6 +70,7 @@ nav span {
     display: inline-block;
     position: relative;
     top: 19px;
+    margin-left: -4px;
 }
 
 tr {

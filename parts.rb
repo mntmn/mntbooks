@@ -110,6 +110,22 @@ class Parts
         String :created_at
         String :updated_at
       end
+      
+      @DB.create_table :builds do
+        primary_key :id
+        String :title
+        String :part_number
+        String :specs
+        String :order_number # link to shop
+        String :invoice_number # link to invoice
+        String :shipment_tracking_url # link to shipment tracking
+        String :customer_email # FIXME should be a more long-lived customer_id?
+        String :status
+        String :status_details # markdown
+        String :eta
+        String :created_at
+        String :updated_at
+      end
     end
 
     puts "Parts initialized."
@@ -137,6 +153,10 @@ class Parts
   
   def get_po_items
     @DB[:po_items]
+  end
+  
+  def get_builds
+    @DB[:builds]
   end
 
   def lookup_mouser_part_number(api_key, pn)
