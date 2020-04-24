@@ -1041,9 +1041,9 @@ class MNTBooks < Sinatra::Base
             :prefix => PREFIX
           }
     end
-    
-    get '/builds/:id' do
-      build = @parts.get_builds.where(:id => params[:id]).first
+
+    def render_build(id, view)
+      build = @parts.get_builds.where(:id => id).first
 
       html = markdown(build[:status_details])
 
@@ -1055,21 +1055,23 @@ class MNTBooks < Sinatra::Base
       done = occurences(html, '[x]')
       total = todo+done
 
-      puts done, total
-
       percentage = ((done.to_f/total.to_f)*100).to_i
 
       html.gsub!('[ ]', '<br><input type="checkbox" readonly>')
       html.gsub!('[x]', '<br><input type="checkbox" checked="checked" readonly>')
 
-      erb :build, :locals => {
+      erb view, :locals => {
             :b => build,
             :status_html => html,
             :percentage => percentage,
             :prefix => PREFIX
           }
     end
-
+    
+    get '/builds/:id' do
+      render_build(params[:id], :build)
+    end
+    
     post '/builds' do
       builds = @parts.get_builds
 
@@ -1090,14 +1092,27 @@ class MNTBooks < Sinatra::Base
 
       data[:updated_at] = current_iso_date_time
 
+      id = params["id"].to_i
+
       if params["id"].size>0
         builds.where(:id => params["id"]).update(data)
-        redirect PREFIX+"/builds"
       else
         data[:created_at] = current_iso_date_time
         id = builds.insert(data)
-        redirect PREFIX+"/builds?notification=Created Build #{id}."
       end
+
+      # store build tracking page for customer
+
+      if !BUILD_PUBLISH_SECRET.nil?
+        html = render_build(id, :build_public)
+        hash = Digest::MD5.hexdigest("#{BUILD_PUBLISH_SECRET}#{id}#{BUILD_PUBLISH_SECRET}")
+        fname = "builds_public/build_#{id}_#{hash}.html"
+        File.open(fname, 'w') do |file|
+          file.write(html)
+        end
+      end
+      
+      redirect PREFIX+"/builds?notification=Created/updated Build #{id}."
     end
   end
   
