@@ -1,0 +1,68 @@
+<html>
+  <head>
+    <%= erb :style %>
+    <link rel="stylesheet" href="dist/auto-complete.css"></link>
+    <title>Builds</title>
+  </head>
+  <body>
+    <%= erb :menu, :locals => { :active => :builds, :prefix => prefix } %>
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>Title</th>
+        <th>Part #</th>
+        <th>Order #</th>
+        <th>Invoice #</th>
+        <th>Customer</th>
+        <th>Status</th>
+        <th>ETA</th>
+        <th>Updated At</th>
+      </tr>
+      <% builds.each do |b| %>
+      <tr>
+        <td><a href="<%= prefix %>/builds?edit_id=<%= b[:id] %>"><%= b[:id] %></a></td>
+        <td><a href="<%= prefix %>/builds/<%= b[:id] %>"><%= b[:title] %></a></td>
+        <td><%= b[:part_number] %></td>
+        <td><%= b[:order_number] %></td>
+        <td><%= b[:invoice_number] %></td>
+        <td><%= b[:customer_email] %></td>
+        <td><%= b[:status] %></td>
+        <td><%= b[:eta] %></td>
+        <td><%= b[:updated_at] %></td>
+      </tr>
+      <% end %>
+    </table>
+
+    <h3>Add / Edit Build</h3>
+
+    <form method="POST" action="<%= prefix %>/builds">
+      <div class="form-group">
+        <label class="form-label">ID</label>
+        <input class="form-input" type="text" name="id" value="<%= b[:id] %>">
+        <label class="form-label">Title</label>
+        <input class="form-input" type="text" name="title" value="<%= b[:title] %>">
+        <label class="form-label">Part #</label>
+        <input class="form-input" type="text" name="part_number" value="<%= b[:part_number] %>">
+        <label class="form-label">Order #</label>
+        <input class="form-input" type="text" name="order_number" value="<%= b[:order_number] %>">
+        <label class="form-label">Invoice #</label>
+        <input class="form-input" type="text" name="invoice_number" value="<%= b[:invoice_number] %>">
+        <label class="form-label">Tracking URL</label>
+        <input class="form-input" type="text" name="shipment_tracking_url" value="<%= b[:tracking_url] %>">
+        <label class="form-label">Customer</label>
+        <input class="form-input" type="text" name="customer_email" value="<%= b[:customer_email] %>">
+        <label class="form-label">Status</label>
+        <input class="form-input" type="text" name="status" value="<%= b[:status] %>">
+        <label class="form-label">Specifications</label>
+        <textarea class="form-input" type="text" name="specs" style="width:600px;height:100px"><%= b[:specs] %></textarea>
+        <label class="form-label">ETA</label>
+        <input class="form-input" type="text" name="eta" value="<%= b[:eta] %>">
+        <label class="form-label">Status Details</label>
+        <textarea class="form-input" type="text" name="status_details" style="width:600px;height:600px"><%= b[:status_details] %></textarea>
+      </div>
+      <div class="form-group">
+        <input type="submit" name="save" value="Save">
+      </div>
+    </form>
+  </body>
+</html>

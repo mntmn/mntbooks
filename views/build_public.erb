@@ -1,0 +1,43 @@
+<html>
+  <head>
+    <%= erb :style %>
+    <title>Build</title>
+  </head>
+  <body>
+    <style>
+      p > br:first-child {
+          display: none;
+      }
+    </style>
+
+    <h2>Build: <%= b[:title] %> (<%= b[:part_number] %>)</h2>
+    <table>
+      <tr>
+        <th>Customer</th>
+        <td><%= b[:customer_email] %></td>
+      </tr>
+      <tr>
+        <th>Invoice</th>
+        <td><%= b[:invoice_number] %></td>
+      </tr>
+      <tr>
+        <th>Status</th>
+        <td><%= percentage %>% complete (<%= b[:status] %>)</td>
+      </tr>
+      <tr>
+        <th>Last Update</th>
+        <td><%= b[:updated_at] %></td>
+      </tr>
+      <tr>
+        <th>ETA</th>
+        <td><%= b[:eta] %></td>
+      </tr>
+    </table>
+
+    <% if b[:shipment_tracking_url]!="" %>
+    <a href="<%= b[:shipment_tracking_url] %>"><h3>Shipment Tracking</h3></a>
+    <% end %>
+
+    <%= status_html %>
+  </body>
+</html>
