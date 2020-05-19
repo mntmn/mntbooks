@@ -1051,8 +1051,8 @@ class MNTBooks < Sinatra::Base
         string.scan(/(?=#{substring})/).count
       end
 
-      todo = occurences(html, '[ ]')
-      done = occurences(html, '[x]')
+      todo = occurences(html, '\[ \]')
+      done = occurences(html, '\[x\]')
       total = todo+done
 
       percentage = ((done.to_f/total.to_f)*100).to_i
