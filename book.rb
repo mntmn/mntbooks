@@ -28,7 +28,8 @@ class Book
   attr_accessor :invoice_rows
 
   include ERB::Util
-  
+
+  # FIXME move these to config
   DOC_FOLDER = ENV["DOC_FOLDER"]
   THUMB_FOLDER = ENV["THUMB_FOLDER"]
   EXPORT_FOLDER = ENV["EXPORT_FOLDER"]
@@ -61,121 +62,119 @@ class Book
     if File.file?(@db_filename)
       @db_exists = true
     end
+    
+    @DB = Sequel.connect("sqlite://#{@db_filename}")
 
-    @book_db = SQLite3::Database.new @db_filename
-    @book_db.results_as_hash = true
+    #@book_db = SQLite3::Database.new @db_filename
+    #@book_db.results_as_hash = true
 
     if !@db_exists
-      create_book_db(@book_db)
+      create_book_db
     end
 
     @bank_acc_db = SQLite3::Database.new @bank_acc_db_filename
     @paypal_db = SQLite3::Database.new @paypal_db_filename
   end
 
-  def create_book_db(db)
-    db.execute <<-SQL
-      create table book (
-        id varchar(32) not null primary key,
-        date varchar(32),
-        amount_cents int,
-        details text,
-        comment text,
-        currency varchar(4),
-        receipt_url text,
-        tax_code varchar(8),
-        debit_account varchar(32),
-        credit_account varchar(32),
-        debit_txn_id varchar(32),
-        credit_txn_id varchar(32),
-        created_at varchar(32),
-        updated_at varchar(32)
-      );
-    SQL
+  def create_book_db
 
-    # TODO: unify txn_ids into one
+    # FIXME doesn't have order_id???
     
-    db.execute <<-SQL
-      create table invoices (
-        invoice_id varchar(64) not null primary key,
-        date varchar(23),
-        amount_cents int,
-        details text,
-        currency varchar(4),
-        tax_code varchar(8),
-        sales_account varchar(32),
-        order_id  varchar (32),
-        payment_method  varchar (32),
-        line_items text,
-        customer_account varchar(32),
-        customer_company text,
-        customer_name  text,
-        customer_address_1 text,
-        customer_address_2 text,
-        customer_zip text,
-        customer_city  text,
-        customer_state text,
-        customer_country text,
-        vat_included varchar(6),
-        replaces_id varchar(64),
-        replaced_by_id varchar(64),
-        created_at varchar(32),
-        updated_at varchar(32)
-      );
-    SQL
+    @DB.create_table :book do
+      primary_key String :id
+      String :date
+      Integer :amount_cents
+      String :details
+      String :comment
+      String :currency
+      String :receipt_url
+      String :tax_code
+      String :debit_account
+      String :credit_account
+      String :txn_id # TODO migrate debit_txn_id and credit_txn_id
+      String :order_id # FIXME ???
+      String :created_at
+      String :updated_at
+    end
 
-    db.execute <<-SQL
-      create table documents (
-        path varchar(512) not null primary key,
-        state varchar(32) not null,
-        docid varchar(32),
-        date varchar(23),
-        sum varchar(32),
-        tags TEXT,
-        created_at varchar(32),
-        updated_at varchar(32)
-      );
-    SQL
+    @DB.create_table :invoices do
+      primary_key String :invoice_id
+      String :invoice_date
+      Integer :amount_cents
+      String :details
+      String :currency
+      String :tax_code
+      String :sales_account
+      String :order_id
+      String :payment_method
+      String :line_items
+      String :customer_account
+      String :customer_company
+      String :customer_name
+      String :customer_address_1
+      String :customer_address_2
+      String :customer_zip
+      String :customer_city
+      String :customer_state
+      String :customer_country
+      String :vat_included
+      String :replaces_id
+      String :replaced_by_id
+      String :created_at
+      String :updated_at
+    end
+
+    @DB.create_table :documents do
+      primary_key String :path
+      String :state
+      String :docid
+      String :date
+      String :sum
+      String :tags
+      String :created_at
+      String :updated_at
+    end
     
-    db.execute <<-SQL
-      create index date_idx on book(date);
-    SQL
+    #db.execute <<-SQL
+    #  create index date_idx on book(date);
+    #SQL
 
     puts "Book DB created."
   end
 
   def create_booking(booking)
+    booking[:updated_at] = current_iso_date_time
+    booking[:created_at] = current_iso_date_time
 
-    # FIXME hash, no direct indexing!
+    # FIXME centralize id mechanism
+    id_raw = "#{booking[:date]}#{booking[:amount_cents]}#{booking[:debit_account]}#{booking[:credit_account]}#{booking[:txn_id]}"
+    booking[:id] = Digest::MD5.hexdigest(id_raw)
     
-    new_row = ["",booking[:date],booking[:amount_cents],booking[:details],booking[:currency],booking[:receipt_url],booking[:tax_code],booking[:debit_account],booking[:credit_account],booking[:debit_txn_id],booking[:credit_txn_id],booking[:order_id],current_iso_date_time,current_iso_date_time,booking[:comment]]
-
-    id_raw = "#{booking[:date]}#{booking[:amount_cents]}#{booking[:debit_account]}#{booking[:credit_account]}#{booking[:debit_txn_id]}#{booking[:credit_txn_id]}"
-    id = Digest::MD5.hexdigest(id_raw)
-    new_row[0] = id
-    
-    @book_db.execute("insert into book (id, date, amount_cents, details, currency, receipt_url, tax_code, debit_account, credit_account, debit_txn_id, credit_txn_id, order_id, created_at, updated_at, comment) 
-            values (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)", new_row)
-
+    @DB[:book].insert(booking)
   end
   
   def create_invoice(invoice)
-    new_row = [invoice[:id],invoice[:invoice_date],invoice[:amount_cents],invoice[:details],invoice[:currency],invoice[:tax_code],invoice[:customer_account],invoice[:sales_account],invoice[:order_id],invoice[:line_items],invoice[:payment_method],invoice[:customer_company],invoice[:customer_name],invoice[:customer_address_1],invoice[:customer_address_2],invoice[:customer_zip],invoice[:customer_city],invoice[:customer_state],invoice[:customer_country],invoice[:vat_included],invoice[:replaces_id],invoice[:replaced_by_id]]
+    # FIXME invoice_id vs id
+    invoice[:invoice_id] = invoice[:id]
+    invoice[:updated_at] = current_iso_date_time
+    invoice[:created_at] = current_iso_date_time
     
-    @book_db.execute("insert into invoices (id, invoice_date, amount_cents, details, currency, tax_code, customer_account, sales_account, order_id, line_items, payment_method, customer_company, customer_name, customer_address_1, customer_address_2, customer_zip, customer_city, customer_state, customer_country, vat_included, replaces_id, replaced_by_id) 
-            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", new_row)
+    @DB[:book].insert(invoice)
   end
 
   def register_invoice_document(invoice, document_path)
+    # FIXME use BigDecimal
     amount_decimal = '%.2f' % (invoice[:amount_cents]/100.0)
     tags = ["outgoing-invoice",invoice[:customer_account],invoice[:sales_account]].join(",")
-    
-    @book_db.execute("replace into documents (path, state, docid, date, sum, tags) values (?, ?, ?, ?, ?, ?)",
+
+    # FIXME use sequel methods
+    @DB.execute("replace into documents (path, state, docid, date, sum, tags) values (?, ?, ?, ?, ?, ?)",
                      [document_path, "defer", invoice[:id], invoice[:invoice_date], amount_decimal, tags])
   end
 
   def link_receipt(id,receipt_url)
-    @book_db.execute("update book set receipt_url = ? where id = ?", receipt_url, id)
+    # FIXME use sequel methods
+    @DB.execute("update book set receipt_url = ? where id = ?", receipt_url, id)
   end
 
   def reload_book
@@ -192,22 +191,13 @@ class Book
 
     ### load all invoice rows into memory
 
-    @invoice_rows = @book_db.execute <<-SQL
-select * from invoices order by id desc;
-SQL
-    converted_invoice_rows = []
-    @invoice_rows.each do |row|
-      row = OpenStruct.new(row)
-      converted_invoice_rows.push(row)
-    end
-    @invoice_rows = converted_invoice_rows
+    # FIXME order by id desc
+    @invoices = @DB[:invoices].all
 
-    ##############################################################
     ### load all book rows into memory
-    
-    @book_rows = @book_db.execute <<-SQL
-select * from book order by date desc;
-SQL
+
+    # FIXME order by date desc
+    @book_rows = @DB[:book].all
 
     converted_book_rows = []
 
