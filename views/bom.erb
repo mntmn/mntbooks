@@ -186,6 +186,53 @@
         </div>
       </form>
     </div>
+
+    <script>
+      // via https://code-maven.com/create-and-download-csv-with-javascript
+      function download_csv(table) {
+        csv = ""
+        table.forEach(function(row) {
+          row[0]='"'+row[0].replace(/"/g,'""')+'"'
+          row[1]='"'+row[1].replace(/"/g,'""')+'"'
+          csv += row.join('\t')
+          csv += "\n"
+        })
+        
+        console.log(csv)
+        var hiddenElement = document.createElement('a')
+        hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
+        hiddenElement.target = '_blank'
+        hiddenElement.download = 'shopping_list.csv'
+        hiddenElement.click()
+      }
+
+      function create_shopping_list(only_missing) {
+        var csv_rows = [["Manufacturer","Manufacturer_No","Stock","Missing"]]
+        var tbl = document.getElementsByClassName("parts-table")[0]
+        for (var y=1; y<tbl.rows.length; y++) {
+          var row = tbl.rows[y].cells
+          if (row[5] && row[5].getElementsByTagName("a").length) {
+            var manuf = row[4].innerText
+            var partno = row[5].getElementsByTagName("a")[0].innerText
+            var instock = parseInt(row[7].innerText)||0
+            var missing = parseInt(row[8].innerText)||0
+
+            if (!only_missing || missing>0) {
+              csv_rows.push([manuf,partno,instock,missing])
+            }
+          }
+        }
+        download_csv(csv_rows)
+      }
+    </script>
+
+    <h3>Create Shopping List</h3>
+    
+    <p>After calculating a build, you can export a TSV with Manufacturer, Part No, In Stock, Missing here.</p>
+    
+    <p><button onclick="create_shopping_list(true)">Download TSV Shopping List (Only Missing)</button></p>
+    
+    <p><button onclick="create_shopping_list(false)">Download TSV Shopping List (All)</button></p>
     
   </body>
 </html>
