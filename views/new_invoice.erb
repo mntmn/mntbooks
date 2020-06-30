@@ -31,7 +31,8 @@
           <option value="cash">cash (paid)</option>
         </select>
         <select id="tax-code" onchange="recalc()">
-          <option value="EU19" selected>EU 19%</option>
+          <option value="EU16" selected>EU 16%</option>
+          <option value="EU19">EU 19%</option>
           <option value="EU7">EU 7%</option>
           <option value="NONEU0">0%</option>
         </select>
@@ -44,9 +45,10 @@
       var taxRate = 0.19
       var invoiceCSV = ""
       var bookRow = {}
-      var taxCode = "EU19"
+      var taxCode = "EU16"
 
       var TAX_RATES = {
+        "EU16": 0.16,
         "EU19": 0.19,
         "EU7": 0.07,
         "NONEU0": 0
@@ -206,7 +208,7 @@
         </tr>
         <tr class="noborder">
           <td colspan="3"></td>
-          <td>VAT (19%)</td>
+          <td>VAT</td>
           <td><span id="total-tax">0.00</span>€</td>
         </tr>
         <tr class="noborder sums-foot grand-total">
