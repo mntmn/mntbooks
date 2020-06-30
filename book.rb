@@ -36,7 +36,8 @@ class Book
 
   TAX_RATES = {
     "NONEU0" => 0,
-    "EU19" => 19,
+    "EU19" => 16, # DE 2020-07-01 until 2020-12-31
+    #"EU19" => 19,
     "EU7" => 7
   }
   
@@ -604,9 +605,12 @@ SQL
       if invoices.include?(docid)
         country = invoices[docid][:customer_country]
         taxcode = invoices[docid][:tax_code]
-        puts taxcode
+
+        # FIXME this should use TAX_RATES
+        
         if taxcode == "EU19"
-          taxrate = 19
+          #taxrate = 19
+          taxrate = 16 # DE 2020-07-01 until 2020-12-31
         elsif taxcode == "NONEU0"
           taxrate = 0
         end
@@ -688,10 +692,6 @@ SQL
         mon = date[5..6].to_i
         quarter = (mon-1)/3+1
         subdir = "#{date[0..3]}Q#{quarter}"
-
-        if (year == 2019 && quarter == 4)
-          puts "UNBOOKED: #{row[:path]} #{row[:sum]} #{row[:tags]}"
-        end
       end
     end
 
